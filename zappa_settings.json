@@ -1,0 +1,14 @@
+{
+    "production": {
+        "app_function": "appstore.app",
+        "aws_region": "us-west-2",
+        "profile_name": "rebble",
+        "project_name": "appstore-api",
+        "runtime": "python3.6",
+        "s3_bucket": "rebble-zappa",
+        "domain": "appstore-api.rebble.io",
+        "route53_enabled": false,
+        "memory_size": 256,
+        "certificate_arn": "arn:aws:acm:us-east-1:032833028620:certificate/65172233-b10a-4934-8b0f-5f24c0b5fcc3"
+    }
+}

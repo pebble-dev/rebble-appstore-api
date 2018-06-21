@@ -14,23 +14,6 @@ class Developer(db.Model):
     name = db.Column(db.String)
 
 
-category_banner_apps = Table('category_banner_apps', db.Model.metadata,
-                             db.Column('category_id', db.String(24), db.ForeignKey('categories.id', ondelete='cascade')),
-                             db.Column('app_id', db.String(24), db.ForeignKey('apps.id', ondelete='cascade')))
-
-
-class Category(db.Model):
-    __tablename__ = "categories"
-    id = db.Column(db.String(24), primary_key=True)
-    name = db.Column(db.String)
-    slug = db.Column(db.String, unique=True)
-    colour = db.Column(db.String(6))
-    icon = db.Column(db.String)
-    app_type = db.Column(db.String, index=True)
-    banner_apps = db.relationship('App', secondary=category_banner_apps, passive_deletes=True)
-    is_visible = db.Column(db.Boolean)
-
-
 class HomeBanners(db.Model):
     __tablename__ = "home_banners"
     id = db.Column(db.Integer, primary_key=True)
@@ -62,17 +45,19 @@ class App(db.Model):
     app_uuid = db.Column(UUID(), index=True)  # There *are* multiple apps with the same UUID. Good luck!
     asset_collections = db.relationship('AssetCollection',
                                         back_populates='app',
-                                        collection_class=attribute_mapped_collection('platform'))
+                                        collection_class=attribute_mapped_collection('platform'),
+                                        lazy='selectin')
     category_id = db.Column(db.String(24), db.ForeignKey('categories.id'), index=True)
-    category = db.relationship('Category')
+    category = db.relationship('Category', lazy='selectin')
     companions = db.relationship('CompanionApp',
                                  back_populates='app',
-                                 collection_class=attribute_mapped_collection('platform'))
+                                 collection_class=attribute_mapped_collection('platform'),
+                                 lazy='selectin')
     created_at = db.Column(db.DateTime)
     developer_id = db.Column(db.String(24), db.ForeignKey('developers.id'))
-    developer = db.relationship('Developer')
+    developer = db.relationship('Developer', lazy='joined')
     hearts = db.Column(db.Integer, index=True)
-    releases = db.relationship('Release', order_by=lambda: Release.id, back_populates='app')
+    releases = db.relationship('Release', order_by=lambda: Release.id, back_populates='app', lazy='selectin')
     icon_large = db.Column(db.String)
     icon_small = db.Column(db.String)
     published_date = db.Column(db.DateTime)
@@ -81,6 +66,23 @@ class App(db.Model):
     timeline_enabled = db.Column(db.Boolean)
     type = db.Column(db.String)
     website = db.Column(db.String)
+
+
+category_banner_apps = Table('category_banner_apps', db.Model.metadata,
+                             db.Column('category_id', db.String(24), db.ForeignKey('categories.id', ondelete='cascade')),
+                             db.Column('app_id', db.String(24), db.ForeignKey('apps.id', ondelete='cascade')))
+
+
+class Category(db.Model):
+    __tablename__ = "categories"
+    id = db.Column(db.String(24), primary_key=True)
+    name = db.Column(db.String)
+    slug = db.Column(db.String, unique=True)
+    colour = db.Column(db.String(6))
+    icon = db.Column(db.String)
+    app_type = db.Column(db.String, index=True)
+    banner_apps = db.relationship('App', secondary=category_banner_apps, passive_deletes=True)
+    is_visible = db.Column(db.Boolean)
 
 
 class CompanionApp(db.Model):

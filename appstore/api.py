@@ -7,9 +7,9 @@ from flask_cors import CORS
 from sqlalchemy.orm.exc import NoResultFound
 from .models import App, AssetCollection, Collection, HomeBanners, Category, CompanionApp
 
+parent_app = None
 api = Blueprint('api', __name__)
 CORS(api)
-
 
 def asset_fallback(collections: Dict[str, AssetCollection], target_hw='basalt') -> AssetCollection:
     # These declare the order we want to try getting a collection in.
@@ -33,7 +33,7 @@ def asset_fallback(collections: Dict[str, AssetCollection], target_hw='basalt') 
 
 
 def generate_pbw_url(release_id: str) -> str:
-    return f'https://magic/{release_id}'
+    return f'{parent_app.config["PBW_ROOT"]}/{release_id}.pbw'
 
 
 def jsonify_companion(companion: Optional[CompanionApp]) -> Optional[dict]:
@@ -154,6 +154,11 @@ def generate_app_response(results):
     })
 
 
+def generated_filter():
+    return ((App.app_uuid >= '13371337-0000-0000-0000-000000000000') &
+            (App.app_uuid < '13371338-0000-0000-0000-000000000000'))
+
+
 @api.route('/apps/id/<key>')
 def apps_by_id(key):
     app = App.query.filter_by(id=key)
@@ -184,9 +189,11 @@ def apps_by_collection(collection, app_type):
         abort(404)
     app_type = type_mapping[app_type]
     if collection == 'all':
-        apps = App.query.filter_by(type=app_type)
+        apps = App.query.filter(App.type == app_type, ~generated_filter())
+    elif collection == 'all-generated':
+        apps = App.query.filter(App.type == app_type, generated_filter())
     else:
-        apps = Collection.query.filter_by(collection).apps.filter_by(type=app_type)
+        apps = Collection.query.filter_by(collection=collection).apps.filter_by(type=app_type)
     return generate_app_response(apps)
 
 
@@ -226,9 +233,6 @@ def home(home_type):
     collections = Collection.query.filter_by(app_type=app_type)
     categories = Category.query.filter_by(app_type=app_type)
 
-    generated_filter = ((App.app_uuid >= '13371337-0000-0000-0000-000000000000') &
-                        (App.app_uuid < '13371338-0000-0000-0000-000000000000'))
-
     result = {
         'banners': [{
             'application_id': banner.app_id,
@@ -252,9 +256,7 @@ def home(home_type):
                     '720x320': asset_fallback(app.asset_collections, hw).banner
                 }
             } for app in category.banner_apps],
-            'application_ids': [
-                app.id for app in App.query.filter_by(category_id=category.id).limit(20)
-            ],
+            'application_ids': [],  # It doesn't really care.
             'links': {
                 'apps': url_for('api.apps_by_category', category=category.slug),
             },
@@ -262,7 +264,7 @@ def home(home_type):
         'collections': [*({
             'name': collection.name,
             'slug': collection.slug,
-            'application_ids': [x.id for x in collection.apps.limit(20)],
+            'application_ids': [x.id for x in collection.apps.limit(7)],
             'links': {
                 'apps': url_for('api.apps_by_collection', collection=collection.slug, app_type=home_type)
             },
@@ -271,9 +273,9 @@ def home(home_type):
             'slug': 'all',
             'application_ids': [
                 x.id for x in App.query
-                    .filter(App.type == app_type, ~generated_filter)
+                    .filter(App.type == app_type, ~generated_filter())
                     .order_by(App.id.desc())
-                    .limit(20)],
+                    .limit(7)],
             'links': {
                 'apps': url_for('api.apps_by_collection', collection='all', app_type=home_type),
             }
@@ -282,9 +284,9 @@ def home(home_type):
             'slug': 'all-generated',
             'application_ids': [
                 x.id for x in App.query
-                    .filter(App.type == app_type, generated_filter)
+                    .filter(App.type == app_type, generated_filter())
                     .order_by(App.id.desc())
-                    .limit(20)],
+                    .limit(7)],
             'links': {
                 'apps': url_for('api.apps_by_collection', collection='all-generated', app_type=home_type),
             }
@@ -304,4 +306,6 @@ def home(home_type):
 
 
 def init_app(app, url_prefix='/api/v1'):
+    global parent_app
+    parent_app = app
     app.register_blueprint(api, url_prefix=url_prefix)

@@ -4,4 +4,5 @@ RUN apk add --update postgresql-dev
 ADD . /code
 WORKDIR /code
 RUN pip install -r requirements.txt
+ENV FLASK_ENV=development
 CMD ["flask", "run", "-h", "0.0.0.0"]
