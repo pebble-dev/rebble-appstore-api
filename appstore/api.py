@@ -5,7 +5,7 @@ from flask import Blueprint, request, jsonify, abort, url_for
 from flask_cors import CORS
 
 from sqlalchemy.orm.exc import NoResultFound
-from .models import App, AssetCollection, Release, Binary, Collection, HomeBanners, Category, CompanionApp
+from .models import App, AssetCollection, Collection, HomeBanners, Category, CompanionApp
 
 api = Blueprint('api', __name__)
 CORS(api)
@@ -226,6 +226,9 @@ def home(home_type):
     collections = Collection.query.filter_by(app_type=app_type)
     categories = Category.query.filter_by(app_type=app_type)
 
+    generated_filter = ((App.app_uuid >= '13371337-0000-0000-0000-000000000000') &
+                        (App.app_uuid < '13371338-0000-0000-0000-000000000000'))
+
     result = {
         'banners': [{
             'application_id': banner.app_id,
@@ -250,20 +253,42 @@ def home(home_type):
                 }
             } for app in category.banner_apps],
             'application_ids': [
-                app.id for app in App.query.filter_by(category_id=category.id).limit(6)
+                app.id for app in App.query.filter_by(category_id=category.id).limit(20)
             ],
             'links': {
                 'apps': url_for('api.apps_by_category', category=category.slug),
             },
         } for category in categories],
-        'collections': [{
+        'collections': [*({
             'name': collection.name,
             'slug': collection.slug,
-            'application_ids': [x.id for x in collection.apps.limit(6)],
+            'application_ids': [x.id for x in collection.apps.limit(20)],
             'links': {
                 'apps': url_for('api.apps_by_collection', collection=collection.slug, app_type=home_type)
             },
-        } for collection in collections],
+        } for collection in collections), {
+            'name': f'All {"Watchfaces" if app_type == "watchface" else "Watchapps"}',
+            'slug': 'all',
+            'application_ids': [
+                x.id for x in App.query
+                    .filter(App.type == app_type, ~generated_filter)
+                    .order_by(App.id.desc())
+                    .limit(20)],
+            'links': {
+                'apps': url_for('api.apps_by_collection', collection='all', app_type=home_type),
+            }
+        }, *([{
+            'name': f'Generated Watchfaces',
+            'slug': 'all-generated',
+            'application_ids': [
+                x.id for x in App.query
+                    .filter(App.type == app_type, generated_filter)
+                    .order_by(App.id.desc())
+                    .limit(20)],
+            'links': {
+                'apps': url_for('api.apps_by_collection', collection='all-generated', app_type=home_type),
+            }
+        }] if app_type == 'watchface' else [])],
     }
 
     app_ids = set()

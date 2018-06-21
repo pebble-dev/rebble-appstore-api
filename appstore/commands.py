@@ -1,6 +1,7 @@
 import datetime
 import shutil
 import uuid
+import zipfile
 
 import click
 import os
@@ -66,6 +67,12 @@ def import_apps(app_type):
                         continue
                     with open(filename, 'wb') as f:
                         shutil.copyfileobj(r.raw, f)
+            try:
+                PBW(filename, 'aplite')
+            except zipfile.BadZipFile:
+                print("Bad PBW!")
+                os.unlink(filename)
+                continue
         else:
             filename = None
 
@@ -93,7 +100,7 @@ def import_apps(app_type):
                     capabilities=app['capabilities'] or [],
                     published_date=parse_datetime(release['published_date']),
                     release_notes=release['release_notes'],
-                    version=release['version'],
+                    version=release.get('version'),
                     compatibility=[
                         k for k, v in app['compatibility'].items() if v['supported'] and k not in ('android', 'ios')
                     ],
@@ -102,9 +109,9 @@ def import_apps(app_type):
                         id=id_generator.generate(),
                         has_pbw=False,
                         published_date=parse_datetime(log['published_date']),
-                        version=log['version'],
+                        version=log.get('version', ''),
                         release_notes=log['release_notes']
-                ) for log in app['changelog'] if log['version'] != release['version']]
+                ) for log in app['changelog'] if log.get('version', '') != release.get('version', '')]
             ],
             icon_large=((app.get('list_image') or {}).get('144x144') or '').replace('/convert?cache=true&fit=crop&w=144&h=144', ''),
             icon_small=((app.get('icon_image') or {}).get('48x48') or '').replace('/convert?cache=true&fit=crop&w=48&h=48', ''),
