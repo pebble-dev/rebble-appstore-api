@@ -11,6 +11,7 @@ parent_app = None
 api = Blueprint('api', __name__)
 CORS(api)
 
+
 def asset_fallback(collections: Dict[str, AssetCollection], target_hw='basalt') -> AssetCollection:
     # These declare the order we want to try getting a collection in.
     # Note that it is not necessarily the case that we will end up with something that
@@ -32,6 +33,20 @@ def asset_fallback(collections: Dict[str, AssetCollection], target_hw='basalt') 
     return next(iter(collections.values()))
 
 
+def generate_image_url(img, width=None, height=None, force=False):
+    if img is None:
+        return None
+    if img == '':
+        return ''
+    url = parent_app.config['IMAGE_ROOT']
+    if width is not None or height is not None:
+        if not force:
+            url += '/fit-in'
+        url += f"/{width or ''}x{height or ''}/filters:upscale()"
+    url += f"/{img}"
+    return url
+
+
 def generate_pbw_url(release_id: str) -> str:
     return f'{parent_app.config["PBW_ROOT"]}/{release_id}.pbw'
 
@@ -41,7 +56,7 @@ def jsonify_companion(companion: Optional[CompanionApp]) -> Optional[dict]:
         return None
     return {
         'id': companion.id,
-        'icon': companion.icon,
+        'icon': generate_image_url(companion.icon),
         'name': companion.name,
         'url': companion.url,
         'required': True,
@@ -52,6 +67,14 @@ def jsonify_companion(companion: Optional[CompanionApp]) -> Optional[dict]:
 def jsonify_app(app: App, target_hw: str) -> dict:
     release = app.releases[0] if len(app.releases) > 0 else None
     assets = asset_fallback(app.asset_collections, target_hw)
+
+    plat_dimensions = {
+        'aplite': (144, 168),
+        'basalt': (144, 168),
+        'chalk': (180, 180),
+        'diorite': (144, 168),
+        'emery': (200, 228),
+    }
     result = {
         'author': app.developer.name,
         'category_id': app.category_id,
@@ -84,22 +107,25 @@ def jsonify_app(app: App, target_hw: str) -> dict:
         'created_at': app.created_at,
         'description': assets.description,
         'developer_id': app.developer_id,
-        'header_images': [{'720x320': x, 'orig': x} for x in assets.headers] if len(assets.headers) > 0 else '',
+        'header_images': [{
+            '720x320': generate_image_url(x, 720, 320),
+            'orig': generate_image_url(x),
+        } for x in assets.headers] if len(assets.headers) > 0 else '',
         'hearts': app.hearts,
         'id': app.id,
         #links: todo?
         'list_image': {
-            '80x80': app.icon_large,
-            '140x140': app.icon_large,
+            '80x80': generate_image_url(app.icon_large, 80, 80, True),
+            '140x140': generate_image_url(app.icon_large, 140, 140, True),
         },
         'icon_image': {
-            '28x28': app.icon_small,
-            '48x48': app.icon_small,
+            '28x28': generate_image_url(app.icon_small, 28, 28, True),
+            '48x48': generate_image_url(app.icon_small, 48, 48, True),
         },
         'published_date': app.published_date,
         'screenshot_hardware': assets.platform,
         'screenshot_images': [{
-            ('144x168' if assets.platform != 'chalk' else '180x180'): x
+            'x'.join(str(y) for y in plat_dimensions[target_hw]): generate_image_url(x, *plat_dimensions[target_hw], True)
         } for x in assets.screenshots],
         'source': app.source,
         'title': app.title,
@@ -238,7 +264,7 @@ def home(home_type):
             'application_id': banner.app_id,
             'title': banner.app.title,
             'image': {
-                '720x320': asset_fallback(banner.app.asset_collections, hw).banner,
+                '720x320': generate_image_url(asset_fallback(banner.app.asset_collections, hw).banner, 720, 320),
             }
         } for banner in banners],
         'categories': [{
@@ -246,14 +272,14 @@ def home(home_type):
             'name': category.name,
             'slug': category.slug,
             'icon': {
-                '88x88': category.icon,
+                '88x88': generate_image_url(category.icon, 88, 88),
             },
             'color': category.colour,
             'banners': [{
                 'application_id': app.id,
                 'title': app.title,
                 'image': {
-                    '720x320': asset_fallback(app.asset_collections, hw).banner
+                    '720x320': generate_image_url(asset_fallback(app.asset_collections, hw).banner, 720, 320),
                 }
             } for app in category.banner_apps],
             'application_ids': [],  # It doesn't really care.
