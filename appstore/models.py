@@ -35,7 +35,11 @@ class Collection(db.Model):
     slug = db.Column(db.String, unique=True)
     app_type = db.Column(db.String, index=True)
     platforms = db.Column(ARRAY(db.String))
-    apps = db.relationship('App', secondary=collection_apps, passive_deletes=True, lazy='dynamic')
+    apps = db.relationship('App',
+                           back_populates='collections',
+                           secondary=collection_apps,
+                           passive_deletes=True,
+                           lazy='dynamic')
 db.Index('collection_platforms_index', Collection.platforms, postgresql_using="gin")
 
 
@@ -53,6 +57,10 @@ class App(db.Model):
                                  back_populates='app',
                                  collection_class=attribute_mapped_collection('platform'),
                                  lazy='selectin')
+    collections = db.relationship('Collection',
+                                  back_populates='apps',
+                                  secondary=collection_apps,
+                                  passive_deletes=True)
     created_at = db.Column(db.DateTime)
     developer_id = db.Column(db.String(24), db.ForeignKey('developers.id'))
     developer = db.relationship('Developer', lazy='joined')

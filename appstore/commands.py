@@ -1,4 +1,5 @@
 import datetime
+import flask.json
 import shutil
 import uuid
 import zipfile
@@ -10,7 +11,7 @@ from flask.cli import AppGroup
 import requests
 from sqlalchemy.orm.exc import NoResultFound
 
-from .utils import id_generator
+from .utils import id_generator, algolia_app
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection
 from .pbw import PBW
 
@@ -153,6 +154,15 @@ def import_apps(app_type):
                                 process_info_flags=metadata['flags'], icon_resource_id=metadata['icon_resource_id'])
                 db.session.add(binary)
         db.session.commit()
+
+
+@apps.command('generate-index')
+def generate_index():
+    apps = App.query.order_by(App.id)
+    result = []
+    for app in apps:
+        result.append(algolia_app(app))
+    print(flask.json.dumps(result, indent=2))
 
 
 def init_app(app):
