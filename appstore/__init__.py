@@ -7,8 +7,8 @@ from .api import init_app as init_api
 from .commands import init_app as init_commands
 
 import logging
-logging.basicConfig(level=logging.DEBUG)
-logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+# logging.basicConfig(level=logging.DEBUG)
+# logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 app = Flask(__name__)
 app.config.update(**config)
