@@ -4,6 +4,9 @@ import time
 from typing import Dict, Optional
 from uuid import getnode
 
+import requests
+from flask import request, abort
+
 from appstore.models import App, AssetCollection, CompanionApp
 
 
@@ -212,3 +215,22 @@ def jsonify_companion(companion: Optional[CompanionApp]) -> Optional[dict]:
         'required': True,
         'pebblekit_version': '3' if companion.pebblekit3 else '2',
     }
+
+
+def get_access_token():
+    access_token = request.args.get('access_token')
+    if not access_token:
+        header = request.headers.get('Authorization')
+        if header:
+            auth = header.split(' ')
+            if len(auth) == 2 and auth[0] == 'Bearer':
+                access_token = auth[1]
+    if not access_token:
+        abort(401)
+    return access_token
+
+
+def authed_request(method, url, **kwargs):
+    headers = kwargs.setdefault('headers', {})
+    headers['Authorization'] = f'Bearer {get_access_token()}'
+    return requests.request(method, url, **kwargs)

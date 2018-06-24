@@ -142,7 +142,6 @@ def import_apps(app_type):
                                          banner=None)
             db.session.add(collection)
 
-
         if filename:
             for platform in ['aplite', 'basalt', 'chalk', 'diorite', 'emery']:
                 pbw = PBW(filename, platform)
