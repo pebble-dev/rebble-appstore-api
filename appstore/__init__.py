@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 
 from .settings import config
 
@@ -20,3 +20,8 @@ init_commands(app)
 @app.route('/heartbeat')
 def heartbeat():
     return 'ok'
+
+
+@app.route('/dummy', methods=['GET', 'POST'])
+def dummy():
+    return jsonify({})

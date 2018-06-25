@@ -5,8 +5,9 @@ from typing import Dict, Optional
 from uuid import getnode
 
 import requests
-from flask import request, abort
+from flask import request, abort, url_for
 
+from .settings import config
 from appstore.models import App, AssetCollection, CompanionApp
 
 
@@ -102,7 +103,15 @@ def jsonify_app(app: App, target_hw: str) -> dict:
             '720x320': generate_image_url(x, 720, 320),
             'orig': generate_image_url(x),
         } for x in assets.headers] if len(assets.headers) > 0 else '',
-        #links: todo?
+        'links': {
+            'add_heart': url_for('legacy_api.add_heart', app_id=app.id, _external=True),
+            'remove_heart': url_for('legacy_api.remove_heart', app_id=app.id, _external=True),
+            'share': f"{config['APPSTORE_ROOT']}/application/{app.id}",
+            'add': 'https://a',
+            'remove': 'https://b',
+            'add_flag': 'https://c',
+            'remove_flag': 'https://d',
+        },
         'list_image': {
             '80x80': generate_image_url(app.icon_large, 80, 80, True),
             '140x140': generate_image_url(app.icon_large, 140, 140, True),
@@ -234,3 +243,10 @@ def authed_request(method, url, **kwargs):
     headers = kwargs.setdefault('headers', {})
     headers['Authorization'] = f'Bearer {get_access_token()}'
     return requests.request(method, url, **kwargs)
+
+
+def get_uid():
+    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
+    if result.status_code != 200:
+        abort(401)
+    return result.json()['uid']
