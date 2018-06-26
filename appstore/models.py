@@ -74,6 +74,7 @@ class App(db.Model):
     timeline_enabled = db.Column(db.Boolean)
     type = db.Column(db.String)
     website = db.Column(db.String)
+    visible = db.Column(db.Boolean, default=True, server_default='TRUE', nullable=False)
 
 
 category_banner_apps = Table('category_banner_apps', db.Model.metadata,
@@ -95,7 +96,7 @@ class Category(db.Model):
 
 class CompanionApp(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    app_id = db.Column(db.String(24), db.ForeignKey('apps.id'), index=True)
+    app_id = db.Column(db.String(24), db.ForeignKey('apps.id', ondelete='cascade'), index=True)
     app = db.relationship('App', back_populates='companions')
     icon = db.Column(db.String)
     url = db.Column(db.String)
@@ -108,7 +109,7 @@ db.Index('companion_app_app_platform_index', CompanionApp.app_id, CompanionApp.p
 class AssetCollection(db.Model):
     __tablename__ = "asset_collections"
     id = db.Column(db.Integer, primary_key=True)
-    app_id = db.Column(db.String(24), db.ForeignKey('apps.id'))
+    app_id = db.Column(db.String(24), db.ForeignKey('apps.id', ondelete='cascade'))
     platform = db.Column(db.String)
     app = db.relationship('App', back_populates='asset_collections')
     description = db.Column(db.Text)
@@ -121,7 +122,7 @@ db.Index('asset_collection_app_platform_index', AssetCollection.app_id, AssetCol
 class Release(db.Model):
     __tablename__ = "releases"
     id = db.Column(db.String(24), primary_key=True)
-    app_id = db.Column(db.String(24), db.ForeignKey('apps.id'), index=True)
+    app_id = db.Column(db.String(24), db.ForeignKey('apps.id', ondelete='cascade'), index=True)
     app = db.relationship('App', back_populates='releases')
     binaries = db.relationship('Binary', back_populates='release')
     has_pbw = db.Column(db.Boolean())
@@ -138,7 +139,7 @@ db.Index('release_app_compatibility_index', Release.compatibility, postgresql_us
 class Binary(db.Model):
     __tablename__ = "binaries"
     id = db.Column(db.Integer(), primary_key=True)
-    release_id = db.Column(db.String(24), db.ForeignKey('releases.id'))
+    release_id = db.Column(db.String(24), db.ForeignKey('releases.id', ondelete='cascade'))
     release = db.relationship('Release', back_populates='binaries')
     platform = db.Column(db.String)
     sdk_major = db.Column(db.Integer)
@@ -150,7 +151,8 @@ class Binary(db.Model):
 class LockerEntry(db.Model):
     __tablename__ = "locker_entries"
     id = db.Column(db.Integer(), primary_key=True)
-    app_id = db.Column(db.String(24), db.ForeignKey('apps.id'))
+    app_id = db.Column(db.String(24), db.ForeignKey('apps.id', ondelete='cascade'))
+    user_token = db.Column(db.String, index=True)
     app = db.relationship('App')
     user_id = db.Column(db.Integer, index=True)
 db.Index('locker_entry_app_user_index', LockerEntry.app_id, LockerEntry.user_id, unique=True)
@@ -159,7 +161,7 @@ db.Index('locker_entry_app_user_index', LockerEntry.app_id, LockerEntry.user_id,
 class UserLike(db.Model):
     __tablename__ = "user_likes"
     user_id = db.Column(db.Integer(), primary_key=True, index=True)
-    app_id = db.Column(db.String(24), db.ForeignKey('apps.id'), primary_key=True, index=True)
+    app_id = db.Column(db.String(24), db.ForeignKey('apps.id', ondelete='cascade'), primary_key=True, index=True)
     app = db.relationship('App')
 db.Index('user_like_app_user_index', UserLike.app_id, UserLike.user_id, unique=True)
 

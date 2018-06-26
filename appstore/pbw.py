@@ -127,7 +127,7 @@ class PBW(object):
 
     @property
     def has_javascript(self):
-        return 'js' in self.get_manifest()
+        return 'pebble-js-app.js' in [x.filename for x in self.zip.filelist]
 
     @property
     def has_platform(self):
@@ -159,3 +159,7 @@ class PBW(object):
 
     def get_worker_path(self):
         return self.get_real_path(self.get_worker_info()['name'])
+
+    def get_capabilities(self):
+        with self.zip.open('appinfo.json') as f:
+            return json.load(f).get('capabilities', [])

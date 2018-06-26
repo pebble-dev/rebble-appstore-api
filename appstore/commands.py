@@ -1,6 +1,9 @@
 import datetime
+import hashlib
+
 import flask.json
 import shutil
+import subprocess
 import uuid
 import zipfile
 
@@ -10,9 +13,10 @@ from flask.cli import AppGroup
 
 import requests
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.exc import IntegrityError
 
 from .utils import id_generator, algolia_app
-from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection
+from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry
 from .pbw import PBW
 
 apps = AppGroup('apps')
@@ -47,6 +51,12 @@ def parse_datetime(string: str) -> datetime.datetime:
     return t
 
 
+def fetch_file(url, destination):
+    if os.path.exists(destination):
+        return
+    subprocess.check_call(["wget", url, "-O", destination])
+
+
 @apps.command('import-apps')
 @click.argument('app_type')
 def import_apps(app_type):
@@ -56,18 +66,19 @@ def import_apps(app_type):
         except NoResultFound:
             dev = Developer(id=app['developer_id'], name=app['author'])
             db.session.add(dev)
-        print(f"Adding app: {app['title']} ({app.get('app_uuid')}, {app['id']})...")
+        if App.query.filter_by(id=app['id']).count() > 0:
+            continue
+        print(f"Adding app: {app['title']} ({app.get('uuid')}, {app['id']})...")
 
         release = app.get('latest_release')
         if release:
             filename = f"pbws/{release['id']}.pbw"
             if not os.path.exists(filename):
-                with requests.get(release['pbw_file'], stream=True) as r:
-                    if r.status_code != 200:
-                        print(f"FAILED to download pbw.")
-                        continue
-                    with open(filename, 'wb') as f:
-                        shutil.copyfileobj(r.raw, f)
+                try:
+                    fetch_file(release['pbw_file'], filename)
+                except subprocess.CalledProcessError:
+                    print("Failed to grab pbw.")
+                    continue
             try:
                 PBW(filename, 'aplite')
             except zipfile.BadZipFile:
@@ -83,7 +94,7 @@ def import_apps(app_type):
             category_id=app['category_id'],
             companions={
                 k: CompanionApp(
-                    icon=v['icon'],
+                    icon=fix_image_url(v['icon']),
                     name=v['name'],
                     url=v['url'],
                     platform=k,
@@ -114,8 +125,8 @@ def import_apps(app_type):
                         release_notes=log['release_notes']
                 ) for log in app['changelog'] if log.get('version', '') != release.get('version', '')]
             ],
-            icon_large=((app.get('list_image') or {}).get('144x144') or '').replace('/convert?cache=true&fit=crop&w=144&h=144', ''),
-            icon_small=((app.get('icon_image') or {}).get('48x48') or '').replace('/convert?cache=true&fit=crop&w=48&h=48', ''),
+            icon_large=fix_image_url((app.get('list_image') or {}).get('144x144') or ''),
+            icon_small=fix_image_url((app.get('icon_image') or {}).get('48x48') or ''),
             published_date=app.get('published_date', release['published_date'] if release else None),
             source=app['source'] or None,
             title=app['title'],
@@ -137,8 +148,8 @@ def import_apps(app_type):
                 continue
             collection = AssetCollection(app=app_obj, platform=data['screenshot_hardware'],
                                          description=data.get('description', ''),
-                                         screenshots=[next(iter(x.values())) for x in data['screenshot_images']],
-                                         headers=[next(iter(x.values())) for x in data['header_images']] if data.get('header_images') else [],
+                                         screenshots=[fix_image_url(next(iter(x.values()))) for x in data['screenshot_images']],
+                                         headers=[fix_image_url(next(iter(x.values()))) for x in data['header_images']] if data.get('header_images') else [],
                                          banner=None)
             db.session.add(collection)
 
@@ -153,6 +164,189 @@ def import_apps(app_type):
                                 process_info_flags=metadata['flags'], icon_resource_id=metadata['icon_resource_id'])
                 db.session.add(binary)
         db.session.commit()
+
+
+category_map = {
+    'Notifications': '5261a8fb3b773043d5000001',
+    'Health & Fitness': '5261a8fb3b773043d5000004',
+    'Remotes': '5261a8fb3b773043d5000008',
+    'Daily': '5261a8fb3b773043d500000c',
+    'Tools & Utilities': '5261a8fb3b773043d500000f',
+    'Games': '5261a8fb3b773043d5000012',
+    'Index': '527509e36526cda2d4000019',
+    'Faces': '528d3ef2dc7b5f580700000a',
+    'GetSomeApps': '52ccee3151a80d28e100003e',
+}
+
+
+mimetype_map = {
+    'image/png': 'png',
+    'image/jpeg': 'jpg',
+    'image/gif': 'gif',
+}
+
+
+def fix_image_url(url):
+    if url == '':
+        return ''
+    identifier = url.split('/file/')[1].split('/convert')[0]
+    s = requests.get(url, stream=True)
+    # content_type = s.headers['Content-Type']
+    # if content_type not in mimetype_map:
+    #     print(f"Skipping unknown content-type {content_type}.")
+    #     return None
+    with open(f'images/{identifier}', 'wb') as f:
+        shutil.copyfileobj(s.raw, f)
+    return identifier
+
+
+def import_app_from_locker(locker_app):
+    print(f"Adding missing app {locker_app['title']}...")
+    if locker_app['developer']['id'] is None:
+        locker_app['developer']['id'] = id_generator.generate()
+    try:
+        dev = Developer.query.filter_by(id=locker_app['developer']['id']).one()
+    except NoResultFound:
+        dev = Developer(id=locker_app['developer']['id'], name=locker_app['developer']['name'])
+        db.session.add(dev)
+
+    release = locker_app.get('pbw')
+    if release:
+        filename = f"pbws/{release['release_id']}.pbw"
+        if not os.path.exists(filename):
+            with requests.get(release['file'], stream=True) as r:
+                if r.status_code != 200:
+                    print(f"FAILED to download pbw.")
+                    return False
+                with open(filename, 'wb') as f:
+                    shutil.copyfileobj(r.raw, f)
+        try:
+            if PBW(filename, 'aplite').zip.testzip() is not None:
+                raise zipfile.BadZipFile
+        except zipfile.BadZipFile:
+            print("Bad PBW!")
+            os.unlink(filename)
+            return False
+    else:
+        filename = None
+
+    created_at = datetime.datetime.utcfromtimestamp(int(locker_app['id'][:8], 16)).replace(tzinfo=datetime.timezone.utc)
+
+    portal_info = requests.get(f"https://dev-portal.getpebble.com/api/applications/{locker_app['id']}")
+    if portal_info.status_code != 200:
+        print("Couldn't get dev portal info for app; skipping.")
+        return None
+    portal_info = portal_info.json()['applications'][0]
+
+    app = App(
+        id=locker_app['id'],
+        app_uuid=locker_app['uuid'],
+        asset_collections={x['name']: AssetCollection(
+            platform=x['name'],
+            description=x.get('description'),
+            screenshots=[fix_image_url(x['images']['screenshot'])],
+            headers=[],
+            banner=None
+        ) for x in locker_app['hardware_platforms']},
+        category_id=category_map.get(locker_app['category'], None),
+        companions={
+            k: CompanionApp(
+                icon=v['icon'],
+                name=v['name'],
+                url=v['url'],
+                platform=k,
+                pebblekit3=(v['pebblekit_version'] == '3'),
+            ) for k, v in locker_app['companions'].items() if v is not None
+        },
+        collections=[],
+        created_at=created_at,
+        developer=dev,
+        hearts=locker_app['hearts'],
+        icon_small=fix_image_url(portal_info['icon_image']),
+        icon_large=fix_image_url(portal_info['list_image']),
+        published_date=created_at,
+        releases=[],
+        source=None,
+        title=locker_app['title'],
+        type=locker_app['type'],
+        website=None,
+        visible=False,
+    )
+    db.session.add(app)
+
+    if filename:
+        pbw = PBW(filename, 'aplite')
+        js_md5 = None
+        if pbw.has_javascript:
+            with pbw.zip.open('pebble-js-app.js', 'r') as f:
+                js_md5 = hashlib.md5(f.read()).hexdigest()
+        release_obj = Release(
+            id=release['release_id'],
+            app_id=locker_app['id'],
+            has_pbw=True,
+            capabilities=pbw.get_capabilities(),
+            js_md5=js_md5,
+            published_date=created_at,
+            release_notes=None,
+            compatibility=[k for k, v in locker_app['compatibility'].items() if v['supported'] and k not in ('android', 'ios')],
+            is_published=True,
+        )
+        db.session.add(release_obj)
+        for platform in ['aplite', 'basalt', 'chalk', 'diorite', 'emery']:
+            pbw = PBW(filename, platform)
+            if not pbw.has_platform:
+                continue
+            metadata = pbw.get_app_metadata()
+            binary = Binary(release=release_obj, platform=platform,
+                            sdk_major=metadata['sdk_version_major'], sdk_minor=metadata['sdk_version_minor'],
+                            process_info_flags=metadata['flags'], icon_resource_id=metadata['icon_resource_id'])
+            db.session.add(binary)
+    db.session.commit()
+    return app
+
+
+@apps.command('import-lockers')
+def import_lockers():
+    with open('users.txt') as f:
+        processed = set()
+        missing = set()
+        for entry in f:
+            uid, token = entry.strip().split()
+            uid = int(uid)
+            print(f"user {uid}...")
+            url = "https://appstore-api.getpebble.com/v2/locker"
+            entries = []
+            total_entries = 0
+            while url is not None:
+                result = requests.get(url, headers={'Authorization': f"Bearer {token}"})
+                if result.status_code != 200:
+                    print(f"Skipping bad user: {uid}")
+                app_ids = [x['id'] for x in result.json()['applications']]
+                existing = {x.id: x for x in App.query.filter(App.id.in_(app_ids))}
+                total_entries += len(app_ids)
+                for app in result.json()['applications']:
+                    if app['id'] not in existing:
+                        if app['id'] not in missing:
+                            added = import_app_from_locker(app)
+                            if added is None:
+                                missing.add(app['id'])
+                        else:
+                            added = None
+                        if not added:
+                            print("Skipping bad app...")
+                            continue
+                        else:
+                            existing[added.id] = added
+                    if app['id'] not in processed:
+                        existing[app['id']].timeline_enabled = app['is_timeline_enabled']
+                        processed.add(app['id'])
+
+                    entries.append(LockerEntry(app_id=app['id'], user_token=app.get('user_token'), user_id=uid))
+                url = result.json()['nextPageURL']
+            db.session.add_all(entries)
+            db.session.commit()
+            print(f"Added {len(existing)} of {total_entries} apps.")
+    print("done.")
 
 
 @apps.command('generate-index')
