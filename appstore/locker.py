@@ -36,7 +36,7 @@ def jsonify_locker_app(entry):
             'name': app.developer.name,
         },
         'pbw': {
-            'pbw': generate_pbw_url(release.id),
+            'file': generate_pbw_url(release.id),
             'icon_resource_id': next(iter(release.binaries.values())).icon_resource_id,
             'release_id': release.id,
         },
