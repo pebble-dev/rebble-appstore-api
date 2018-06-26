@@ -65,7 +65,7 @@ class App(db.Model):
     developer_id = db.Column(db.String(24), db.ForeignKey('developers.id'))
     developer = db.relationship('Developer', lazy='joined')
     hearts = db.Column(db.Integer, index=True)
-    releases = db.relationship('Release', order_by=lambda: Release.id, back_populates='app', lazy='selectin')
+    releases = db.relationship('Release', order_by=lambda: Release.published_date, back_populates='app', lazy='selectin')
     icon_large = db.Column(db.String)
     icon_small = db.Column(db.String)
     published_date = db.Column(db.DateTime)
@@ -124,7 +124,9 @@ class Release(db.Model):
     id = db.Column(db.String(24), primary_key=True)
     app_id = db.Column(db.String(24), db.ForeignKey('apps.id', ondelete='cascade'), index=True)
     app = db.relationship('App', back_populates='releases')
-    binaries = db.relationship('Binary', back_populates='release')
+    binaries = db.relationship('Binary',
+                               back_populates='release',
+                               collection_class=attribute_mapped_collection('platform'))
     has_pbw = db.Column(db.Boolean())
     capabilities = db.Column(ARRAY(db.String))
     js_md5 = db.Column(db.String(32))

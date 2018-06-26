@@ -7,6 +7,7 @@ from .api import init_app as init_api
 from .dev_portal_api import init_app as init_dev_portal_api
 from .commands import init_app as init_commands
 from .utils import init_app as init_utils
+from .locker import locker
 
 app = Flask(__name__)
 app.config.update(**config)

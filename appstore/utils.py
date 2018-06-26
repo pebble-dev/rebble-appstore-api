@@ -58,7 +58,7 @@ def _jsonify_common(app: App, target_hw: str) -> dict:
             },
             **{
                 x: {
-                    'supported': x in (release.compatibility if release else ['aplite', 'basalt', 'diorite', 'emery']),
+                    'supported': x in (release.compatibility if release and release.compatibility else ['aplite', 'basalt', 'diorite', 'emery']),
                     'firmware': {'major': 3}
                 } for x in ['aplite', 'basalt', 'chalk', 'diorite', 'emery']
             },
@@ -82,7 +82,7 @@ def _jsonify_common(app: App, target_hw: str) -> dict:
 
 
 def jsonify_app(app: App, target_hw: str) -> dict:
-    release = app.releases[0] if len(app.releases) > 0 else None
+    release = app.releases[-1] if len(app.releases) > 0 else None
     assets = asset_fallback(app.asset_collections, target_hw)
 
     result = _jsonify_common(app, target_hw)
@@ -114,7 +114,7 @@ def jsonify_app(app: App, target_hw: str) -> dict:
         },
         'list_image': {
             '80x80': generate_image_url(app.icon_large, 80, 80, True),
-            '140x140': generate_image_url(app.icon_large, 140, 140, True),
+            '144x144': generate_image_url(app.icon_large, 144, 144, True),
         },
         'icon_image': {
             '28x28': generate_image_url(app.icon_small, 28, 28, True),

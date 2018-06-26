@@ -56,13 +56,13 @@ def apps_by_id(key):
 
 @api.route('/apps/dev/<dev>')
 def apps_by_dev(dev):
-    apps = App.query.filter_by(developer_id=dev)
+    apps = App.query.filter_by(developer_id=dev, visible=True)
     return generate_app_response(apps)
 
 
 @api.route('/apps/category/<category>')
 def apps_by_category(category):
-    apps = App.query.filter(App.category.has(slug=category))
+    apps = App.query.filter(App.category.has(slug=category), visible=True)
     return generate_app_response(apps)
 
 
@@ -78,11 +78,11 @@ def apps_by_collection(collection, app_type):
         abort(404)
     app_type = type_mapping[app_type]
     if collection == 'all':
-        apps = App.query.filter(App.type == app_type, ~generated_filter())
+        apps = App.query.filter(App.type == app_type, ~generated_filter(), App.visible)
     elif collection == 'all-generated':
-        apps = App.query.filter(App.type == app_type, generated_filter())
+        apps = App.query.filter(App.type == app_type, generated_filter(), App.visible)
     else:
-        apps = Collection.query.filter_by(collection=collection).apps.filter_by(type=app_type)
+        apps = Collection.query.filter_by(collection=collection).apps.filter_by(type=app_type, visible=True)
     return generate_app_response(apps)
 
 
@@ -162,7 +162,7 @@ def home(home_type):
             'slug': 'all',
             'application_ids': [
                 x.id for x in App.query
-                    .filter(App.type == app_type, ~generated_filter())
+                    .filter(App.type == app_type, ~generated_filter(), App.visible)
                     .order_by(App.id.desc())
                     .limit(7)],
             'links': {
@@ -173,7 +173,7 @@ def home(home_type):
             'slug': 'all-generated',
             'application_ids': [
                 x.id for x in App.query
-                    .filter(App.type == app_type, generated_filter())
+                    .filter(App.type == app_type, generated_filter(), App.visible)
                     .order_by(App.id.desc())
                     .limit(7)],
             'links': {
