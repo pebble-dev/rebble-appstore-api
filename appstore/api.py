@@ -2,11 +2,12 @@ import urllib.parse
 
 from flask import Blueprint, request, jsonify, abort, url_for
 from flask_cors import CORS
+from sqlalchemy import and_
 
 from sqlalchemy.orm.exc import NoResultFound
 
 from appstore.utils import jsonify_app, asset_fallback, generate_image_url
-from .models import App, Collection, HomeBanners, Category
+from .models import App, Collection, HomeBanners, Category, db, Release
 
 parent_app = None
 api = Blueprint('api', __name__)
@@ -48,6 +49,17 @@ def generated_filter():
             (App.app_uuid < '13371338-0000-0000-0000-000000000000'))
 
 
+def hw_compat(hw):
+    _compat = (db.session.query(Release.compatibility, Release.app_id)
+                        .order_by(Release.published_date.desc())
+                        .subquery())
+    return and_(_compat.c.compatibility.contains([hw]), _compat.c.app_id == App.id)
+
+
+def global_filter(hw):
+    return and_(hw_compat(hw), App.visible)
+
+
 @api.route('/apps/id/<key>')
 def apps_by_id(key):
     app = App.query.filter_by(id=key)
@@ -56,18 +68,21 @@ def apps_by_id(key):
 
 @api.route('/apps/dev/<dev>')
 def apps_by_dev(dev):
-    apps = App.query.filter_by(developer_id=dev, visible=True)
+    hw = request.args.get('hardware', 'basalt')
+    apps = App.query.filter_by(developer_id=dev).filter(global_filter(hw))
     return generate_app_response(apps)
 
 
 @api.route('/apps/category/<category>')
 def apps_by_category(category):
-    apps = App.query.filter(App.category.has(slug=category), visible=True)
+    hw = request.args.get('hardware', 'basalt')
+    apps = App.query.filter(App.category.has(slug=category)).filter(global_filter(hw))
     return generate_app_response(apps)
 
 
 @api.route('/apps/collection/<collection>/<app_type>')
 def apps_by_collection(collection, app_type):
+    hw = request.args.get('hardware', 'basalt')
     type_mapping = {
         'watchapps-and-companions': 'watchapp',
         'apps': 'watchapp',
@@ -78,11 +93,11 @@ def apps_by_collection(collection, app_type):
         abort(404)
     app_type = type_mapping[app_type]
     if collection == 'all':
-        apps = App.query.filter(App.type == app_type, ~generated_filter(), App.visible)
+        apps = App.query.filter(App.type == app_type, ~generated_filter(), global_filter(hw))
     elif collection == 'all-generated':
-        apps = App.query.filter(App.type == app_type, generated_filter(), App.visible)
+        apps = App.query.filter(App.type == app_type, generated_filter(), global_filter(hw))
     else:
-        apps = Collection.query.filter_by(collection=collection).apps.filter_by(type=app_type, visible=True)
+        apps = Collection.query.filter_by(collection=collection).apps.filter_by(type=app_type).filter(global_filter(hw))
     return generate_app_response(apps)
 
 
@@ -162,7 +177,7 @@ def home(home_type):
             'slug': 'all',
             'application_ids': [
                 x.id for x in App.query
-                    .filter(App.type == app_type, ~generated_filter(), App.visible)
+                    .filter(App.type == app_type, ~generated_filter(), global_filter(hw))
                     .order_by(App.id.desc())
                     .limit(7)],
             'links': {
@@ -173,7 +188,7 @@ def home(home_type):
             'slug': 'all-generated',
             'application_ids': [
                 x.id for x in App.query
-                    .filter(App.type == app_type, generated_filter(), App.visible)
+                    .filter(App.type == app_type, generated_filter(), global_filter(hw))
                     .order_by(App.id.desc())
                     .limit(7)],
             'links': {
