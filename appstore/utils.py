@@ -137,11 +137,11 @@ def jsonify_app(app: App, target_hw: str) -> dict:
 
 def algolia_app(app: App) -> dict:
     assets = asset_fallback(app.asset_collections, 'aplite')
-    release = app.releases[0] if len(app.releases) > 0 else None
+    release = app.releases[-1] if len(app.releases) > 0 else None
 
     tags = [app.type]
     if release:
-        tags.extend(release.compatibility)
+        tags.extend(release.compatibility or [])
     else:
         tags.extend(['aplite', 'basalt', 'chalk', 'diorite', 'emery'])
         tags.append('companion-app')
