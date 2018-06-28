@@ -1,5 +1,6 @@
 import secrets
 
+import time
 from flask import url_for, jsonify, request, abort
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
@@ -34,6 +35,7 @@ def jsonify_locker_app(entry):
         'developer': {
             'id': app.developer.id,
             'name': app.developer.name,
+            'contact_email': 'noreply@rebble.io',
         },
         'pbw': {
             'file': generate_pbw_url(release.id),
@@ -78,7 +80,9 @@ def jsonify_locker_app(entry):
 def locker():
     uid = get_uid()
     entries = LockerEntry.query.filter_by(user_id=uid).options(joinedload(LockerEntry.app))
-    return jsonify({'applications': [jsonify_locker_app(x) for x in entries]})
+    response = jsonify({'applications': [jsonify_locker_app(x) for x in entries]})
+    response.headers['ETag'] = str(int(time.time()))
+    return response
 
 
 @api.route("/locker/<app_uuid>", methods=['GET', 'PUT', 'DELETE'])

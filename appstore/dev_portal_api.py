@@ -1,5 +1,5 @@
 from algoliasearch import algoliasearch
-from flask import Blueprint, jsonify, abort
+from flask import Blueprint, jsonify, abort, request
 from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
@@ -35,6 +35,9 @@ def me():
             'added_ids': added_ids,
             'voted_ids': voted_ids,
             'flagged_ids': [],
+            'applications': [],
+            'name': me['name'],
+            'href': request.url,
         }],
     })
 
