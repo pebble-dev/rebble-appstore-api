@@ -14,11 +14,11 @@ api = Blueprint('api', __name__)
 CORS(api)
 
 
-def generate_app_response(results):
+def generate_app_response(results, sort_override=None):
     target_hw = request.args.get('hardware', 'basalt')
     limit = min(int(request.args.get('limit', '20')), 100)
     offset = int(request.args.get('offset', '0'))
-    sorting = request.args.get('sort', 'updated')
+    sorting = sort_override or request.args.get('sort', 'updated')
     if sorting == 'hearts':
         results = results.order_by(App.hearts.desc())
     else:
@@ -92,13 +92,17 @@ def apps_by_collection(collection, app_type):
     if app_type not in type_mapping:
         abort(404)
     app_type = type_mapping[app_type]
+    sort_override = None
     if collection == 'all':
         apps = App.query.filter(App.type == app_type, ~generated_filter(), global_filter(hw))
+    elif collection == 'most-loved':
+        apps = App.query.filter(App.type == app_type, global_filter(hw))
+        sort_override = 'hearts'
     elif collection == 'all-generated':
         apps = App.query.filter(App.type == app_type, generated_filter(), global_filter(hw))
     else:
         apps = Collection.query.filter_by(collection=collection).apps.filter_by(type=app_type).filter(global_filter(hw))
-    return generate_app_response(apps)
+    return generate_app_response(apps, sort_override=sort_override)
 
 
 @api.route('/applications/<app_id>/changelog')
@@ -173,6 +177,17 @@ def home(home_type):
                 'apps': url_for('api.apps_by_collection', collection=collection.slug, app_type=home_type)
             },
         } for collection in collections), {
+            'name': f'Most Loved',
+            'slug': 'most-loved',
+            'application_ids': [
+                x.id for x in App.query
+                    .filter(App.type == app_type, global_filter(hw))
+                    .order_by(App.hearts.desc())
+                    .limit(7)],
+            'links': {
+                'apps': url_for('api.apps_by_collection', collection='most-loved', app_type=home_type),
+            }
+        }, {
             'name': f'All {"Watchfaces" if app_type == "watchface" else "Watchapps"}',
             'slug': 'all',
             'application_ids': [
