@@ -12,11 +12,12 @@ import os
 from flask.cli import AppGroup
 
 import requests
+from sqlalchemy.orm import load_only
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.exc import IntegrityError
 
 from .utils import id_generator, algolia_app
-from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry
+from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
 from .pbw import PBW
 
 apps = AppGroup('apps')
@@ -347,6 +348,26 @@ def import_lockers():
             db.session.commit()
             print(f"Added {len(existing)} of {total_entries} apps.")
     print("done.")
+
+
+@apps.command('import-likes')
+def import_likes():
+    known_apps = set(x.id for x in App.query.options(load_only('id')))
+    with open('users.txt') as f:
+        for entry in f:
+            uid, token = entry.strip().split()
+            uid = int(uid)
+            print(f"Importing user {uid}...")
+            dev_portal = requests.get('https://dev-portal.getpebble.com/api/users/me',
+                                      headers={'Authorization': f"Bearer {token}"})
+            if dev_portal.status_code != 200:
+                print(f"Skipping user {uid}: dev portal didn't load: {dev_portal.status_code}.")
+                continue
+            voted = set(dev_portal.json()['users'][0]['voted_ids'])
+            db.session.add_all(UserLike(user_id=uid, app_id=x) for x in voted if x in known_apps)
+            db.session.commit()
+            print(f"Imported {len(voted)} likes.")
+    print("Done.")
 
 
 @apps.command('generate-index')
