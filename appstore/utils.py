@@ -39,8 +39,9 @@ def init_app(app):
     global parent_app
     parent_app = app
 
+
 def _jsonify_common(app: App, target_hw: str) -> dict:
-    release = app.releases[0] if len(app.releases) > 0 else None
+    release = app.releases[-1] if len(app.releases) > 0 else None
     assets = asset_fallback(app.asset_collections, target_hw)
 
     result = {
