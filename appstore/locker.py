@@ -16,7 +16,7 @@ def jsonify_locker_app(entry):
     release = app.releases[-1] if len(app.releases) > 0 else None  # type: Release
     assets = app.asset_collections
 
-    return {
+    return {**{
         'id': app.id,
         'uuid': app.app_uuid,
         'user_token': entry.user_token,
@@ -36,11 +36,6 @@ def jsonify_locker_app(entry):
             'id': app.developer.id,
             'name': app.developer.name,
             'contact_email': 'noreply@rebble.io',
-        },
-        'pbw': {
-            'file': generate_pbw_url(release.id),
-            'icon_resource_id': next(iter(release.binaries.values())).icon_resource_id,
-            'release_id': release.id,
         },
         'hardware_platforms': [{
             'sdk_version': f"{x.sdk_major}.{x.sdk_minor}",
@@ -73,7 +68,13 @@ def jsonify_locker_app(entry):
             'ios': jsonify_companion(app.companions.get('ios')),
             'android': jsonify_companion(app.companions.get('android')),
         },
-    }
+    }, **({
+        'pbw': {
+            'file': generate_pbw_url(release.id),
+            'icon_resource_id': next(iter(release.binaries.values())).icon_resource_id,
+            'release_id': release.id,
+        }
+    } if release and len(release.binaries) else {})}
 
 
 @api.route("/locker")
