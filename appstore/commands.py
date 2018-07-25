@@ -58,6 +58,26 @@ def fetch_file(url, destination):
     subprocess.check_call(["wget", url, "-O", destination])
 
 
+@apps.command('fix-capabilities')
+def fix_caps():
+    for pbw_path in os.listdir('pbws'):
+        release_id = pbw_path[:-4]
+        try:
+            pbw = PBW(f'pbws/{pbw_path}', 'aplite')
+            caps = [x for x in pbw.get_capabilities() if x != '']
+        except (KeyError, zipfile.BadZipFile):
+            print("Invalid PBW!?")
+            continue
+        try:
+            release = Release.query.filter_by(id=release_id).one()
+        except NoResultFound:
+            print("PBW with no release: {release_id}")
+            continue
+        print(f"{release.id}: {release.capabilities} -> {caps}")
+        release.capabilities = caps
+    db.session.commit()
+
+
 @apps.command('import-apps')
 @click.argument('app_type')
 def import_apps(app_type):
