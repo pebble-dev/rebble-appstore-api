@@ -247,7 +247,7 @@ def authed_request(method, url, **kwargs):
 
 
 def get_uid():
-    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
+    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me?flag_authed=true")
     if result.status_code != 200:
         abort(401)
     return result.json()['uid']
