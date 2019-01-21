@@ -116,7 +116,7 @@ def app_locker(app_uuid):
 
 
 @api.route("/locker/by_token/<user_token>")
-def app_locker(user_token):
+def app_locker_by_token(user_token):
     try:
         entry = LockerEntry.query.join(LockerEntry.app).filter(LockerEntry.user_token == user_token).one()
     except NoResultFound:
