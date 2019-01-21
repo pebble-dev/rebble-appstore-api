@@ -113,3 +113,20 @@ def app_locker(app_uuid):
             db.session.delete(entry)
             db.session.commit()
         return '', 204
+
+
+@api.route("/locker/by_token/<user_token>")
+def app_locker(user_token):
+    try:
+        entry = LockerEntry.query.join(LockerEntry.app).filter(LockerEntry.user_token == user_token).one()
+    except NoResultFound:
+        abort(404)
+        return
+
+    result = {
+        "user_token": entry.user_token,
+        "user_id": entry.user_id,
+        "app_uuid": entry.app.app_uuid
+    }
+
+    return jsonify(result)
