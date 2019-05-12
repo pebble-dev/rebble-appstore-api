@@ -8,7 +8,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from .settings import config
 from .models import App, LockerEntry, Release, db
 from .api import api
-from .utils import get_uid, generate_pbw_url, asset_fallback, generate_image_url, plat_dimensions, jsonify_companion
+from .utils import get_uid, generate_pbw_url, asset_fallback, generate_image_url, plat_dimensions, jsonify_companion, get_access_token
 
 
 def jsonify_locker_app(entry):
@@ -117,6 +117,10 @@ def app_locker(app_uuid):
 
 @api.route("/locker/by_token/<user_token>")
 def app_locker_by_token(user_token):
+    secret = get_access_token()
+    if secret != config['SECRET_KEY']:
+        abort(401)
+
     try:
         entry = LockerEntry.query.join(LockerEntry.app).filter(LockerEntry.user_token == user_token).one()
     except NoResultFound:

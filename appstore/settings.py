@@ -13,4 +13,5 @@ config = {
     'ALGOLIA_APP_ID': os.environ.get('ALGOLIA_APP_ID'),
     'ALGOLIA_ADMIN_API_KEY': os.environ.get('ALGOLIA_ADMIN_API_KEY'),
     'ALGOLIA_INDEX': os.environ.get('ALGOLIA_INDEX'),
+    'SECRET_KEY': os.environ.get('SECRET_KEY'),
 }
