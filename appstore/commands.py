@@ -18,7 +18,8 @@ from sqlalchemy.exc import IntegrityError
 
 from .utils import id_generator, algolia_app
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
-from .pbw import PBW
+from .pbw import PBW, release_from_pbw
+from .s3 import upload_pbw
 
 apps = AppGroup('apps')
 
@@ -398,6 +399,24 @@ def generate_index():
         result.append(algolia_app(app))
     print(flask.json.dumps(result, indent=2))
 
+@apps.command('update-patched-release')
+@click.argument('new_pbw')
+@click.argument('patchlvl')
+def update_patched_release(new_pbw, patchlvl):
+    release_id = os.path.basename(new_pbw).split('.')[0]
+    release_old = Release.query.filter_by(id=release_id).one()
+    if release_old.version is None:
+        newvers = patchlvl
+    else:
+        newvers = f"{release_old.version}-{patchlvl}"
+    release_new = release_from_pbw(release_old.app, new_pbw,
+                                   release_notes = "Automatic maintenance patch from Rebble.",
+                                   published_date = datetime.datetime.utcnow(),
+                                   version = newvers,
+                                   compatibility = release_old.compatibility)
+    print(f"Uploading new version {newvers} of {release_old.app.id} ({release_old.app.title})...")
+    upload_pbw(release_new, new_pbw)
+    db.session.commit()
 
 def init_app(app):
     app.cli.add_command(apps)

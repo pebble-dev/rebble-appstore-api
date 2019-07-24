@@ -6,7 +6,12 @@ import os
 import struct
 import uuid
 import zipfile
+import datetime
+import hashlib
+from .models import Binary, App, Release, db
+from .utils import id_generator
 
+PLATFORMS = ['aplite', 'basalt', 'chalk', 'diorite', 'emery']
 
 class PBW(object):
     MANIFEST_FILENAME = 'manifest.json'
@@ -163,3 +168,38 @@ class PBW(object):
     def get_capabilities(self):
         with self.zip.open('appinfo.json') as f:
             return json.load(f).get('capabilities', [])
+    
+    def create_binary(self, release):
+        if not self.has_platform:
+            return
+        metadata = self.get_app_metadata();
+        binary = Binary(release=release, platform=self.platform,
+                        sdk_major=metadata['sdk_version_major'], sdk_minor=metadata['sdk_version_minor'],
+                        process_info_flags=metadata['flags'], icon_resource_id=metadata['icon_resource_id'])
+        db.session.add(binary)
+        
+def release_from_pbw(app, filename, release_notes = None, published_date = datetime.datetime.utcnow(), version = '', compatibility = []):
+    pbw = PBW(filename, 'aplite')
+    js_md5 = None
+    if pbw.has_javascript:
+        with pbw.zip.open('pebble-js-app.js', 'r') as f:
+            js_md5 = hashlib.md5(f.read()).hexdigest()
+    release = Release(
+        id=id_generator.generate(),
+        app_id=app.id,
+        has_pbw=True,
+        capabilities=pbw.get_capabilities(),
+        js_md5=js_md5,
+        published_date=published_date,
+        release_notes=release_notes,
+        version=version,
+        compatibility=compatibility,
+        is_published=True,
+    )
+    db.session.add(release)
+    
+    for platform in PLATFORMS:
+        pbw = PBW(filename, platform)
+        pbw.create_binary(release)
+    
+    return release

@@ -14,4 +14,6 @@ config = {
     'ALGOLIA_ADMIN_API_KEY': os.environ.get('ALGOLIA_ADMIN_API_KEY'),
     'ALGOLIA_INDEX': os.environ.get('ALGOLIA_INDEX'),
     'SECRET_KEY': os.environ.get('SECRET_KEY'),
+    'S3_BUCKET': os.environ.get('S3_BUCKET', 'rebble-pbws'),
+    'S3_PATH': os.environ.get('S3_PATH', 'pbw/'),
 }
