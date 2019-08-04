@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+import json
 
 import flask.json
 import shutil
@@ -416,6 +417,29 @@ def update_patched_release(new_pbw, patchlvl):
                                    compatibility = release_old.compatibility)
     print(f"Uploading new version {newvers} of {release_old.app.id} ({release_old.app.title})...")
     upload_pbw(release_new, new_pbw)
+    db.session.commit()
+
+@apps.command('new-release')
+@click.argument('pbw_file')
+@click.argument('release_notes')
+def new_release(pbw_file, release_notes):
+    pbw = PBW(pbw_file, 'aplite')
+    with pbw.zip.open('appinfo.json') as f:
+        j = json.load(f)
+    uuid = j['uuid']
+    version = j['versionLabel']
+    app = App.query.filter_by(app_uuid = uuid).one()
+    release_old = Release.query.filter_by(app = app).order_by(Release.published_date).limit(1).one()
+    print(f"Previous version {release_old.version}, new version {version}, release notes {release_old.release_notes}")
+    if version == release_old.version:
+        version = f"{version}-rbl"
+    release_new = release_from_pbw(app, pbw_file,
+                                   release_notes = release_notes,
+                                   published_date = datetime.datetime.utcnow(),
+                                   version = version,
+                                   compatibility = release_old.compatibility)
+    print(f"Uploading new version {version} of {release_old.app.id} ({release_old.app.title})...")
+    upload_pbw(release_new, pbw_file)
     db.session.commit()
 
 def init_app(app):
