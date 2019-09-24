@@ -24,7 +24,7 @@ def generate_app_response(results, sort_override=None):
     else:
         results = results.order_by(App.id.desc())
     # This is slow-ish, but over our appstore size we don't really care.
-    paged_results = results.offset(offset).limit(limit + 1)
+    paged_results = results.distinct().offset(offset).limit(limit + 1)
     data = [jsonify_app(x, target_hw) for x in paged_results]
     next_page = None
     if len(data) > limit:
