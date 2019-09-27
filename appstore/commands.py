@@ -1,6 +1,7 @@
 import datetime
 import hashlib
 import json
+import yaml
 
 import flask.json
 import shutil
@@ -17,13 +18,21 @@ from sqlalchemy.orm import load_only
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.exc import IntegrityError
 
+from algoliasearch import algoliasearch
+
 from .utils import id_generator, algolia_app
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
 from .pbw import PBW, release_from_pbw
-from .s3 import upload_pbw
+from .s3 import upload_pbw, upload_asset
+from .settings import config
+
+if config['ALGOLIA_ADMIN_API_KEY']:
+    algolia_client = algoliasearch.Client(config['ALGOLIA_APP_ID'], config['ALGOLIA_ADMIN_API_KEY'])
+    algolia_index = algolia_client.init_index(config['ALGOLIA_INDEX'])
+else:
+    algolia_index = None
 
 apps = AppGroup('apps')
-
 
 @apps.command('import-home')
 @click.argument('home_type')
@@ -441,6 +450,65 @@ def new_release(pbw_file, release_notes):
     print(f"Uploading new version {version} of {release_old.app.id} ({release_old.app.title})...")
     upload_pbw(release_new, pbw_file)
     db.session.commit()
+
+@apps.command('new-app')
+@click.argument('conf')
+def new_app(conf):
+    params = yaml.load(open(conf, "r"))
+
+    pbw_file = params['pbw_file']
+    pbw = PBW(pbw_file, 'aplite')
+    with pbw.zip.open('appinfo.json') as f:
+        appinfo = json.load(f)
+    
+    if App.query.filter(App.app_uuid == appinfo['uuid']).count() > 0:
+        raise ValueError("app already exists!")
+    
+    if 'developer_id' in params:
+        developer = Developer.query.filter(Developer.id == params['developer_id']).one()
+    else:
+        developer = Developer(id = id_generator.generate(), name = appinfo['companyName'])
+        db.session.add(developer)
+    
+    header_asset = upload_asset(params['header'])
+    
+    app_obj = App(
+        id = id_generator.generate(),
+        app_uuid = appinfo['uuid'],
+        asset_collections = { x['name']: AssetCollection(
+            platform=x['name'],
+            description=params['description'],
+            screenshots=[upload_asset(s) for s in x['screenshots']],
+            headers = [header_asset],
+            banner = None
+        ) for x in params['assets']},
+        category_id = category_map[params['category']],
+        companions = {}, # companions not supported yet
+        created_at = datetime.datetime.utcnow(),
+        developer = developer,
+        hearts = 0,
+        releases = [],
+        icon_large = upload_asset(params['large_icon']),
+        icon_small = upload_asset(params['small_icon']),
+        source = params['source'],
+        title = params['title'],
+        type = params['type'],
+        website = params['website']
+    )
+    db.session.add(app_obj)
+    print(f"Created app {app_obj.id}")
+    
+    release = release_from_pbw(app_obj, pbw_file,
+                               release_notes = params['release_notes'],
+                               published_date = datetime.datetime.utcnow(),
+                               version = appinfo['versionLabel'],
+                               compatibility = appinfo['targetPlatforms'])
+    print(f"Created release {release.id}")
+    upload_pbw(release, pbw_file)
+    db.session.commit()
+    
+    if algolia_index:
+        algolia_index.partial_update_objects([algolia_app(app_obj)], { 'createIfNotExists': True })
 
 def init_app(app):
     app.cli.add_command(apps)

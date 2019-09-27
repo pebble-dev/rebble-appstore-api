@@ -16,4 +16,6 @@ config = {
     'SECRET_KEY': os.environ.get('SECRET_KEY'),
     'S3_BUCKET': os.environ.get('S3_BUCKET', 'rebble-pbws'),
     'S3_PATH': os.environ.get('S3_PATH', 'pbw/'),
+    'S3_ASSET_BUCKET': os.environ.get('S3_ASSET_BUCKET', 'rebble-appstore-assets'),
+    'S3_ASSET_PATH': os.environ.get('S3_ASSET_PATH', ''),
 }

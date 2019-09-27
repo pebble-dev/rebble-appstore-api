@@ -3,8 +3,7 @@ import boto3
 from botocore.exceptions import ClientError
 from .models import Binary
 from .settings import config
-
-FILE_BUCKET = 'rebble-pbws'
+from .utils import id_generator
 
 # Try to find a way to get S3 credentials.
 session = None
@@ -30,3 +29,13 @@ def upload_pbw(release, file):
     
     s3 = session.client('s3')
     s3.upload_file(file, config['S3_BUCKET'], filename)
+
+def upload_asset(file, mime_type = "image/png"):
+    id = id_generator.generate()
+    filename = f"{config['S3_ASSET_PATH']}{id}"
+    print(f"uploading file {file} to {config['S3_ASSET_BUCKET']}:{filename}")
+    
+    s3 = session.client('s3')
+    s3.upload_file(file, config['S3_ASSET_BUCKET'], filename, ExtraArgs = {'ContentType': mime_type})
+    
+    return id
