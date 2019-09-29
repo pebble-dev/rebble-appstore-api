@@ -493,6 +493,7 @@ def new_app(conf):
         source = params['source'],
         title = params['title'],
         type = params['type'],
+        timeline_enabled = False,
         website = params['website']
     )
     db.session.add(app_obj)
