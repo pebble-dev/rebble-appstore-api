@@ -30,10 +30,18 @@ def upload_pbw(release, file):
     s3 = session.client('s3')
     s3.upload_file(file, config['S3_BUCKET'], filename)
 
-def upload_asset(file, mime_type = "image/png"):
+def upload_asset(file, mime_type = None):
     id = id_generator.generate()
     filename = f"{config['S3_ASSET_PATH']}{id}"
     print(f"uploading file {file} to {config['S3_ASSET_BUCKET']}:{filename}")
+    
+    if mime_type is None:
+        if file.endswith(".gif"):
+            mime_type = "image/gif"
+        elif file.endswith(".jpg") or file.endswith(".jpeg"):
+            mime_type = "image/jpeg"
+        else:
+            mime_type = "image/png"
     
     s3 = session.client('s3')
     s3.upload_file(file, config['S3_ASSET_BUCKET'], filename, ExtraArgs = {'ContentType': mime_type})

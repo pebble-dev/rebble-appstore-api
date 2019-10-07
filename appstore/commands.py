@@ -455,9 +455,12 @@ def new_release(pbw_file, release_notes):
 @click.argument('conf')
 def new_app(conf):
     params = yaml.load(open(conf, "r"))
+    
+    def path(base):
+        return f"{os.path.dirname(conf)}/{base}"
 
     pbw_file = params['pbw_file']
-    pbw = PBW(pbw_file, 'aplite')
+    pbw = PBW(path(pbw_file), 'aplite')
     with pbw.zip.open('appinfo.json') as f:
         appinfo = json.load(f)
     
@@ -470,7 +473,7 @@ def new_app(conf):
         developer = Developer(id = id_generator.generate(), name = appinfo['companyName'])
         db.session.add(developer)
     
-    header_asset = upload_asset(params['header'])
+    header_asset = upload_asset(path(params['header']))
     
     app_obj = App(
         id = id_generator.generate(),
@@ -478,18 +481,18 @@ def new_app(conf):
         asset_collections = { x['name']: AssetCollection(
             platform=x['name'],
             description=params['description'],
-            screenshots=[upload_asset(s) for s in x['screenshots']],
+            screenshots=[upload_asset(path(s)) for s in x['screenshots']],
             headers = [header_asset],
             banner = None
         ) for x in params['assets']},
-        category_id = category_map[params['category']],
+        category_id = category_map.get(params['category'], None),
         companions = {}, # companions not supported yet
         created_at = datetime.datetime.utcnow(),
         developer = developer,
         hearts = 0,
         releases = [],
-        icon_large = upload_asset(params['large_icon']),
-        icon_small = upload_asset(params['small_icon']),
+        icon_large = upload_asset(path(params['large_icon'])),
+        icon_small = upload_asset(path(params['small_icon'])),
         source = params['source'],
         title = params['title'],
         type = params['type'],
@@ -499,13 +502,13 @@ def new_app(conf):
     db.session.add(app_obj)
     print(f"Created app {app_obj.id}")
     
-    release = release_from_pbw(app_obj, pbw_file,
+    release = release_from_pbw(app_obj, path(pbw_file),
                                release_notes = params['release_notes'],
                                published_date = datetime.datetime.utcnow(),
                                version = appinfo['versionLabel'],
                                compatibility = appinfo['targetPlatforms'])
     print(f"Created release {release.id}")
-    upload_pbw(release, pbw_file)
+    upload_pbw(release, path(pbw_file))
     db.session.commit()
     
     if algolia_index:
