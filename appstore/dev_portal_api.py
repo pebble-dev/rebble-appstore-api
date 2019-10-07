@@ -49,13 +49,13 @@ def add_heart(app_id):
         app = App.query.filter_by(id=app_id).one()
         like = UserLike(user_id=uid, app_id=app_id)
         db.session.add(like)
+        App.query.filter_by(id=app_id).update({'hearts': App.hearts + 1})
+        db.session.commit()
     except NoResultFound:
         abort(404)
         return
     except IntegrityError:
         return "already hearted", 400
-    App.query.filter_by(id=app_id).update({'hearts': App.hearts + 1})
-    db.session.commit()
     if algolia_index:
         algolia_index.partial_update_object({'objectID': app_id, 'hearts': app.hearts}, no_create=True)
     return 'ok'
