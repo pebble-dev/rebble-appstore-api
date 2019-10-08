@@ -81,7 +81,7 @@ def jsonify_locker_app(entry):
 def locker():
     uid = get_uid()
     entries = LockerEntry.query.filter_by(user_id=uid).options(joinedload(LockerEntry.app))
-    response = jsonify({'applications': [jsonify_locker_app(x) for x in entries]})
+    response = jsonify({'applications': [jsonify_locker_app(x) for x in entries if x.app is not None]})
     response.headers['ETag'] = str(int(time.time()))
     return response
 
@@ -102,6 +102,8 @@ def app_locker(app_uuid):
                                                                App.app_uuid == app_uuid).one_or_none()
         if entry is None:
             app = App.query.filter_by(app_uuid=app_uuid).first()
+            if app is None:
+                return 'invalid app', 400
             entry = LockerEntry(app=app, user_id=uid, user_token=secrets.token_urlsafe(32))
             db.session.add(entry)
             db.session.commit()
