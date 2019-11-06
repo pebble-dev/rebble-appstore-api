@@ -472,6 +472,7 @@ def new_app(conf):
     else:
         developer = Developer(id = id_generator.generate(), name = appinfo['companyName'])
         db.session.add(developer)
+        print(f"Created developer {developer.id}")
     
     header_asset = upload_asset(path(params['header']))
     
