@@ -493,7 +493,7 @@ def new_app(conf):
         hearts = 0,
         releases = [],
         icon_large = upload_asset(path(params['large_icon'])),
-        icon_small = upload_asset(path(params['small_icon'])),
+        icon_small = upload_asset(path(params['small_icon'])) if 'small_icon' in params else '',
         source = params['source'],
         title = params['title'],
         type = params['type'],
@@ -514,6 +514,53 @@ def new_app(conf):
     
     if algolia_index:
         algolia_index.partial_update_objects([algolia_app(app_obj)], { 'createIfNotExists': True })
+
+@apps.command('update-app')
+@click.argument('appid')
+@click.argument('conf')
+def update_app(appid, conf):
+    params = yaml.load(open(conf, "r"))
+    
+    def path(base):
+        return f"{os.path.dirname(conf)}/{base}"
+
+    pbw_file = params['pbw_file']
+    pbw = PBW(path(pbw_file), 'aplite')
+    with pbw.zip.open('appinfo.json') as f:
+        appinfo = json.load(f)
+    
+    header_asset = upload_asset(path(params['header']))
+    
+    app_obj = App.query.filter(App.id == appid).one()
+    
+    app_obj.asset_collections = {}
+    app_obj.asset_collections = {
+        x['name']: AssetCollection(
+            platform=x['name'],
+            description=params['description'],
+            screenshots=[upload_asset(path(s)) for s in x['screenshots']],
+            headers = [header_asset],
+            banner = None
+        ) for x in params['assets'] }
+    app_obj.icon_large = upload_asset(path(params['large_icon'])),
+    app_obj.icon_small = upload_asset(path(params['small_icon'])) if 'small_icon' in params else '',
+    app_obj.source = params['source'],
+    app_obj.title = params['title'],
+    app_obj.website = params['website']
+    print(f"Updated app {app_obj.id}")
+    
+    release = release_from_pbw(app_obj, path(pbw_file),
+                               release_notes = params['release_notes'],
+                               published_date = datetime.datetime.utcnow(),
+                               version = appinfo['versionLabel'],
+                               compatibility = appinfo['targetPlatforms'])
+    print(f"Created release {release.id}")
+    upload_pbw(release, path(pbw_file))
+    db.session.commit()
+    
+    if algolia_index:
+        algolia_index.partial_update_objects([algolia_app(app_obj)], { 'createIfNotExists': True })
+
 
 def init_app(app):
     app.cli.add_command(apps)
