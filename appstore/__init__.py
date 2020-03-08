@@ -1,3 +1,14 @@
+try:
+    import google.auth.exceptions
+    try:
+        import googleclouddebugger
+        googleclouddebugger.enable(module='appstore-api')
+    except (ImportError, google.auth.exceptions.DefaultCredentialsError):
+        print("Couldn't start cloud debugger")
+except ImportError:
+    print("Couldn't import google exceptions")
+
+
 from flask import Flask, jsonify
 
 from .settings import config

@@ -1,0 +1,15 @@
+steps:
+- name: 'busybox'
+  args:
+  - sh
+  - -c
+  - |
+    echo '{"git": {"revisionId": "$REVISION_ID", "url": "git@github.com:pebble-dev/rebble-appstore-api.git"}}' > source-context.json
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+  - build
+  - "--tag=gcr.io/pebble-rebirth/appstore-api:g$SHORT_SHA"
+  - "--file=./Dockerfile.cloudrun"
+  - .
+images:
+- "gcr.io/pebble-rebirth/appstore-api:g$SHORT_SHA"
