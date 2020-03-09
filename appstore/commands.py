@@ -280,7 +280,7 @@ def import_app_from_locker(locker_app):
             headers=[],
             banner=None
         ) for x in locker_app['hardware_platforms']},
-        category_id=category_map.get(locker_app['category'], None),
+        category_id=category_map[locker_app['category']],
         companions={
             k: CompanionApp(
                 icon=v['icon'],
@@ -486,7 +486,7 @@ def new_app(conf):
             headers = [header_asset],
             banner = None
         ) for x in params['assets']},
-        category_id = category_map.get(params['category'], None),
+        category_id = category_map[params['category']],
         companions = {}, # companions not supported yet
         created_at = datetime.datetime.utcnow(),
         developer = developer,
