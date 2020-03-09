@@ -13,6 +13,7 @@ from beeline.patch import requests
 from beeline.middleware.flask import HoneyMiddleware
 
 from flask import Flask, jsonify, request
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .settings import config
 
@@ -25,6 +26,7 @@ from .locker import locker
 
 app = Flask(__name__)
 app.config.update(**config)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 if config['HONEYCOMB_KEY']:
      beeline.init(writekey=config['HONEYCOMB_KEY'], dataset='rws', service_name='appstore-api')
      HoneyMiddleware(app, db_events=True)
