@@ -8,8 +8,11 @@ try:
 except ImportError:
     print("Couldn't import google exceptions")
 
+import beeline
+from beeline.patch import requests
+from beeline.middleware.flask import HoneyMiddleware
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 
 from .settings import config
 
@@ -22,12 +25,19 @@ from .locker import locker
 
 app = Flask(__name__)
 app.config.update(**config)
+if config['HONEYCOMB_KEY']:
+     beeline.init(writekey=config['HONEYCOMB_KEY'], dataset='rws', service_name='appstore-api')
+     HoneyMiddleware(app, db_events=True)
+
 init_models(app)
 init_utils(app)
 init_api(app)
 init_dev_portal_api(app)
 init_commands(app)
 
+@app.before_request
+def before_request():
+    beeline.add_context_field("route", request.endpoint)
 
 @app.route('/heartbeat')
 def heartbeat():
