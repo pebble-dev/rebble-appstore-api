@@ -126,7 +126,8 @@ class Release(db.Model):
     app = db.relationship('App', back_populates='releases')
     binaries = db.relationship('Binary',
                                back_populates='release',
-                               collection_class=attribute_mapped_collection('platform'))
+                               collection_class=attribute_mapped_collection('platform'),
+                               lazy='selectin')
     has_pbw = db.Column(db.Boolean())
     capabilities = db.Column(ARRAY(db.String))
     js_md5 = db.Column(db.String(32))
