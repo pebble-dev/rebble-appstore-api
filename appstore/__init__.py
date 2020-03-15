@@ -10,10 +10,10 @@ except ImportError:
 
 from flask import Flask, jsonify, request
 from werkzeug.middleware.proxy_fix import ProxyFix
+from rws_common import honeycomb
 
 from .settings import config
 
-from .rws_common import honeycomb
 from .models import init_app as init_models
 from .api import init_app as init_api
 from .dev_portal_api import init_app as init_dev_portal_api

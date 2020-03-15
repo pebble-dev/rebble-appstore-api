@@ -22,4 +22,4 @@ urllib3==1.23
 Werkzeug==0.16.1
 boto3==1.9.169
 PyYAML==5.1.2
-honeycomb-beeline==2.11.4
+./rws-common
