@@ -35,6 +35,7 @@ init_dev_portal_api(app)
 init_commands(app)
 
 @app.route('/heartbeat')
+@app.route('/appstore-api/heartbeat')
 def heartbeat():
     return 'ok'
 
