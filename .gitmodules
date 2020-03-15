@@ -1,0 +1,3 @@
+[submodule "appstore/rws_common"]
+	path = appstore/rws_common
+	url = ../rws-common

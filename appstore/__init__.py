@@ -13,7 +13,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .settings import config
 
-from .honeycomb import init_app as init_honeycomb
+from .rws_common import honeycomb
 from .models import init_app as init_models
 from .api import init_app as init_api
 from .dev_portal_api import init_app as init_dev_portal_api
@@ -24,7 +24,10 @@ from .locker import locker
 app = Flask(__name__)
 app.config.update(**config)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
-init_honeycomb(app)
+
+honeycomb.init(app, 'appstore-api')
+honeycomb.sample_routes['api.locker'] = 10
+
 init_models(app)
 init_utils(app)
 init_api(app)
