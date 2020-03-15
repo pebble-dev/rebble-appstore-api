@@ -24,6 +24,6 @@ jobs:
       run: echo ${{ secrets.GCLOUD_SERVICE_KEY }} | base64 -d | docker login -u _json_key --password-stdin https://gcr.io/
     # Runs a single command using the runners shell
     - name: Build Docker
-      run: docker build -t gcr.io/pebble-rebirth/appstore-api:g${GITHUB_SHA::8} -f Dockerfile.cloudrun
+      run: docker build -t gcr.io/pebble-rebirth/appstore-api:g${GITHUB_SHA::8} -f Dockerfile.cloudrun .
     - name: Push
       run: docker push gcr.io/pebble-rebirth/appstore-api:g${GITHUB_SHA::8}
