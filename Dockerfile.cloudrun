@@ -4,5 +4,6 @@ COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 ADD . /code
 WORKDIR /code
+RUN pip install ./rws-common
 ENV FLASK_ENV=production
 CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 appstore:app
