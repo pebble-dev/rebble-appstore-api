@@ -438,7 +438,7 @@ def new_release(pbw_file, release_notes):
     uuid = j['uuid']
     version = j['versionLabel']
     app = App.query.filter_by(app_uuid = uuid).one()
-    release_old = Release.query.filter_by(app = app).order_by(Release.published_date).limit(1).one()
+    release_old = Release.query.filter_by(app = app).order_by(Release.published_date.desc()).limit(1).one()
     print(f"Previous version {release_old.version}, new version {version}, release notes {release_old.release_notes}")
     if version == release_old.version:
         version = f"{version}-rbl"
