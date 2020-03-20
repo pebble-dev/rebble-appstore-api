@@ -239,7 +239,7 @@ def get_access_token():
                 access_token = auth[1]
     if not access_token:
         abort(401)
-    beeline.add_context_field('access_token', access_token[:-8])
+    beeline.add_context_field('access_token', access_token[-8:])
     return access_token
 
 
