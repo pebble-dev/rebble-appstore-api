@@ -7,6 +7,8 @@ from uuid import getnode
 import requests
 from flask import request, abort, url_for
 
+import beeline
+
 from .settings import config
 from appstore.models import App, AssetCollection, CompanionApp
 
@@ -237,6 +239,7 @@ def get_access_token():
                 access_token = auth[1]
     if not access_token:
         abort(401)
+    beeline.add_context_field('access_token', access_token[:-8])
     return access_token
 
 
@@ -250,4 +253,5 @@ def get_uid():
     result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me?flag_authed=true")
     if result.status_code != 200:
         abort(401)
+    beeline.add_context_field('user', result.json()['uid'])
     return result.json()['uid']
