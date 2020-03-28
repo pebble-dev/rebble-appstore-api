@@ -29,6 +29,7 @@ honeycomb.init(app, 'appstore-api')
 honeycomb.sample_routes['api.locker'] = 10
 honeycomb.debug_tokens['wDvxMgcf'] = True # andrusca
 honeycomb.debug_tokens['PyPxlyfo'] = True # joshua
+honeycomb.debug_tokens['fUDufdDQ'] = True # andrusca
 
 init_models(app)
 init_utils(app)
