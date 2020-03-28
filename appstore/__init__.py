@@ -27,7 +27,8 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 honeycomb.init(app, 'appstore-api')
 honeycomb.sample_routes['api.locker'] = 10
-honeycomb.debug_tokens['wDvxMgcf'] = True
+honeycomb.debug_tokens['wDvxMgcf'] = True # andrusca
+honeycomb.debug_tokens['PyPxlyfo'] = True # joshua
 
 init_models(app)
 init_utils(app)
