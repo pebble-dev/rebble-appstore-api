@@ -172,7 +172,7 @@ def home(home_type):
         'collections': [*({
             'name': collection.name,
             'slug': collection.slug,
-            'application_ids': [x.id for x in collection.apps.limit(7)],
+            'application_ids': [x.id for x in collection.apps.distinct().limit(7)],
             'links': {
                 'apps': url_for('api.apps_by_collection', collection=collection.slug, app_type=home_type)
             },
@@ -183,6 +183,7 @@ def home(home_type):
                 x.id for x in App.query
                     .filter(App.type == app_type, global_filter(hw))
                     .order_by(App.hearts.desc())
+                    .distinct()
                     .limit(7)],
             'links': {
                 'apps': url_for('api.apps_by_collection', collection='most-loved', app_type=home_type),
@@ -194,6 +195,7 @@ def home(home_type):
                 x.id for x in App.query
                     .filter(App.type == app_type, ~generated_filter(), global_filter(hw))
                     .order_by(App.id.desc())
+                    .distinct()
                     .limit(7)],
             'links': {
                 'apps': url_for('api.apps_by_collection', collection='all', app_type=home_type),
@@ -205,6 +207,7 @@ def home(home_type):
                 x.id for x in App.query
                     .filter(App.type == app_type, generated_filter(), global_filter(hw))
                     .order_by(App.id.desc())
+                    .distinct()
                     .limit(7)],
             'links': {
                 'apps': url_for('api.apps_by_collection', collection='all-generated', app_type=home_type),
