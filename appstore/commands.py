@@ -474,7 +474,10 @@ def new_app(conf):
         db.session.add(developer)
         print(f"Created developer {developer.id}")
     
-    header_asset = upload_asset(path(params['header']))
+    if 'header' in params:
+        header_asset = upload_asset(path(params['header']))
+    else:
+        header_asset = None
     
     app_obj = App(
         id = id_generator.generate(),
@@ -483,7 +486,7 @@ def new_app(conf):
             platform=x['name'],
             description=params['description'],
             screenshots=[upload_asset(path(s)) for s in x['screenshots']],
-            headers = [header_asset],
+            headers = [header_asset] if header_asset else [],
             banner = None
         ) for x in params['assets']},
         category_id = category_map[params['category']],
@@ -507,7 +510,7 @@ def new_app(conf):
                                release_notes = params['release_notes'],
                                published_date = datetime.datetime.utcnow(),
                                version = appinfo['versionLabel'],
-                               compatibility = appinfo['targetPlatforms'])
+                               compatibility = appinfo.get('targetPlatforms', [ 'aplite', 'basalt', 'diorite', 'emery' ]))
     print(f"Created release {release.id}")
     upload_pbw(release, path(pbw_file))
     db.session.commit()
