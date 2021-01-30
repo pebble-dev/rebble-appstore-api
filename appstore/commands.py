@@ -532,7 +532,11 @@ def update_app(appid, conf):
     with pbw.zip.open('appinfo.json') as f:
         appinfo = json.load(f)
     
-    header_asset = upload_asset(path(params['header']))
+    if 'header' in params:
+        header_asset = upload_asset(path(params['header']))
+    else:
+        header_asset = None
+
     
     app_obj = App.query.filter(App.id == appid).one()
     
@@ -542,7 +546,7 @@ def update_app(appid, conf):
             platform=x['name'],
             description=params['description'],
             screenshots=[upload_asset(path(s)) for s in x['screenshots']],
-            headers = [header_asset],
+            headers = [header_asset] if header_asset else [],
             banner = None
         ) for x in params['assets'] }
     app_obj.icon_large = upload_asset(path(params['large_icon'])),
