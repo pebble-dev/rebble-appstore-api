@@ -42,6 +42,29 @@ def me():
     })
 
 
+@legacy_api.route('/users/me/developer')
+def my_apps():
+    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
+    if result.status_code != 200:
+        abort(401)
+    me = result.json()
+    developer_id = me['id']
+    my_apps = [x for x in App.query.filter_by(developer_id=developer_id)]
+    # Python is just weird javascript
+    my_appdata = []
+    for a in my_apps:
+        my_appdata.append({
+            "id": a.id,
+            "title": a.title
+        })
+
+    return jsonify({
+            'id': me['id'],
+            'applications': my_appdata,
+            'name': me['name'],
+            'href': request.url,
+    })
+
 @legacy_api.route('/applications/<app_id>/add_heart', methods=['POST'])
 def add_heart(app_id):
     uid = get_uid()
