@@ -1,6 +1,7 @@
 import os
 import random
 import time
+import imghdr
 from typing import Dict, Optional
 from uuid import getnode
 
@@ -11,6 +12,9 @@ import beeline
 
 from .settings import config
 from appstore.models import App, AssetCollection, CompanionApp
+
+# from werkzeug.datastructures import ImmutableMultiDict
+
 
 
 parent_app = None
@@ -124,6 +128,7 @@ def jsonify_app(app: App, target_hw: str) -> dict:
             '48x48': generate_image_url(app.icon_small, 48, 48, True),
         },
         'published_date': app.published_date,
+        'visible': app.visible,
     }
     if release:
         result['latest_release'] = {
@@ -255,3 +260,100 @@ def get_uid():
         abort(401)
     beeline.add_context_field('user', result.json()['uid'])
     return result.json()['uid']
+
+def validate_new_app_fields(request):
+    data = dict(request.form)
+
+    required_fields = [
+        "title",
+        "type",
+        "description",
+        "release_notes",
+        "category"
+    ]
+
+    valid_categories = [
+        "Daily",
+        "Tools & Utilities",
+        "Notifications",
+        "Remotes",
+        "Health & Fitness",
+        "Games",
+        "Index",
+        "Faces",
+        "GetSomeApps"
+    ]
+
+    permitted_image_types = [
+        "png",
+        "jpeg",
+        "gif",
+        "bmp"
+    ]
+
+    screenshot_platforms = [
+        "aplite",
+        "basalt",
+        "chalk",
+        "diorite",
+    ]
+    
+
+    # First we check we have all the always required fields
+    if not all (k in data for k in required_fields):
+        return False, "Missing a required field", "field.missing"
+
+    # If we have an app, check app-specific fields
+    if data["type"] == "app":
+        if not "category" in data:
+            return False, "Missing field: category", "category.missing"
+
+        if not data["category"] in validCategories:
+            return False, "Illegal value for category", "category.illegal"
+
+        if not "small_icon" in request.files:
+            return False, "Missing file: small_icon", "small_icon.missing"
+
+        if not "banner" in request.files:
+            return False, "Missing file: banner", "banner.missing"
+
+    # Check we have a large icon file
+    if not "large_icon" in request.files:
+        return False, "Missing file: large_icon", "large_icon.missing"
+
+    # Check we have screenshots
+    # We'll either use the generic screenshots for all platforms
+    # or we use the platform specific screenshots
+    # We must have at least 1 screenshot in total
+    # Here we also validate it's an image file
+
+    atLeastOneScreenshot = False
+    if "screenshot-generic-1" in request.files:
+        for x in range(6):
+            if f"screenshot-generic-{x}" in request.files:
+                imgtype = imghdr.what(request.files[f"screenshot-generic-{x}"])
+                if imgtype in permitted_image_types:
+                    atLeastOneScreenshot = True
+                else:
+                    return False, "Illegal image type: " + str(imgtype), "screenshots.illegalvalue"
+    else:
+        for platform in screenshot_platforms:
+            print(platform)
+            for x in range(6):
+                 if f"screenshot-{platform}-{x}" in request.files:
+                    imgtype = imghdr.what(request.files[f"screenshot-{platform}-{x}"])
+                    if imgtype in permitted_image_types:
+                        atLeastOneScreenshot = True
+                    else:
+                        return False, "Illegal image type: " + str(imgtype), "screenshots.illegalvalue"
+
+    if not atLeastOneScreenshot:
+        return False, "No screenshots provided", "screenshots.noneprovided"
+
+    # Check we have a pbw
+    if not "pbw" in request.files:
+        return False, "Missing file: pbw", "pbw.missing"
+
+    # If you are here, you are good to go
+
+    return True, ""
