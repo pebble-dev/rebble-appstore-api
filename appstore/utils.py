@@ -304,7 +304,7 @@ def validate_new_app_fields(request):
         return False, "Missing a required field", "field.missing"
 
     # If we have an app, check app-specific fields
-    if data["type"] == "app":
+    if data["type"] == "watchapp":
         if not "category" in data:
             return False, "Missing field: category", "category.missing"
 
