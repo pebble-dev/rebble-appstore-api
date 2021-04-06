@@ -261,17 +261,7 @@ def get_uid():
     beeline.add_context_field('user', result.json()['uid'])
     return result.json()['uid']
 
-def validate_new_app_fields(request):
-    data = dict(request.form)
-
-    required_fields = [
-        "title",
-        "type",
-        "description",
-        "release_notes",
-        "category"
-    ]
-
+def is_valid_category(category):
     valid_categories = [
         "Daily",
         "Tools & Utilities",
@@ -282,6 +272,19 @@ def validate_new_app_fields(request):
         "Index",
         "Faces",
         "GetSomeApps"
+    ]
+
+    return (category in valid_categories)
+
+def validate_new_app_fields(request):
+    data = dict(request.form)
+
+    required_fields = [
+        "title",
+        "type",
+        "description",
+        "release_notes",
+        "category"
     ]
 
     permitted_image_types = [
@@ -304,11 +307,11 @@ def validate_new_app_fields(request):
         return False, "Missing a required field", "field.missing"
 
     # If we have an app, check app-specific fields
-    if data["type"] == "watchapp":
+    if data["type"] == "app":
         if not "category" in data:
             return False, "Missing field: category", "category.missing"
 
-        if not data["category"] in validCategories:
+        if not is_valid_category(data["category"]):
             return False, "Illegal value for category", "category.illegal"
 
         if not "small_icon" in request.files:
