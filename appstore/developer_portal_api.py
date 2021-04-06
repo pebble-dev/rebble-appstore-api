@@ -9,7 +9,7 @@ from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
-from .utils import authed_request, get_uid, id_generator, validate_new_app_fields
+from .utils import authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
 from .pbw_in_memory import PBW, release_from_pbw
 from .s3 import upload_pbw_from_memory, upload_asset_from_memory
@@ -19,6 +19,18 @@ from .settings import config
 parent_app = None
 devportal_api = Blueprint('devportal_api', __name__)
 CORS(devportal_api)
+
+category_map = {
+                'Notifications': '5261a8fb3b773043d5000001',
+                'Health & Fitness': '5261a8fb3b773043d5000004',
+                'Remotes': '5261a8fb3b773043d5000008',
+                'Daily': '5261a8fb3b773043d500000c',
+                'Tools & Utilities': '5261a8fb3b773043d500000f',
+                'Games': '5261a8fb3b773043d5000012',
+                'Index': '527509e36526cda2d4000019',
+                'Faces': '528d3ef2dc7b5f580700000a',
+                'GetSomeApps': '52ccee3151a80d28e100003e',
+            }
 
 # Do we need this?
 if config['ALGOLIA_ADMIN_API_KEY']:
@@ -34,7 +46,7 @@ def test():
     })
 
 @devportal_api.route('/submit', methods=['POST'])
-def submitNewApp():
+def submit_new_app():
     try:
 
         # Validate all fields
@@ -51,18 +63,6 @@ def submitNewApp():
                 "basalt": [],
                 "chalk": [],
                 "diorite": []
-            }
-
-            category_map = {
-                'Notifications': '5261a8fb3b773043d5000001',
-                'Health & Fitness': '5261a8fb3b773043d5000004',
-                'Remotes': '5261a8fb3b773043d5000008',
-                'Daily': '5261a8fb3b773043d500000c',
-                'Tools & Utilities': '5261a8fb3b773043d500000f',
-                'Games': '5261a8fb3b773043d5000012',
-                'Index': '527509e36526cda2d4000019',
-                'Faces': '528d3ef2dc7b5f580700000a',
-                'GetSomeApps': '52ccee3151a80d28e100003e',
             }
 
             # Create temp dir to put files in
@@ -189,11 +189,76 @@ def submitNewApp():
         # print(pbw.readlines())
         # return "OK"
     except Exception as e:
-        print(e)
-        traceback.print_exc()
+        # print(e)
+        # traceback.print_exc()
         print("Oh no")
-        abort(400)
+        abort(500)
         return
+
+@devportal_api.route('/app/<appID>', methods=['POST'])
+def update_app_fields(appID):
+    # try:
+        req = request.json
+
+        allowed_fields = [
+            "title",
+            "description",
+            "category",
+            "website",
+            "source"
+        ]
+
+        # Check all passed fields are allowed
+        for x in req:
+            if not x in allowed_fields:
+                return jsonify(error = f"Illegal field: {x}", e = "illegal.field"), 400
+
+        # Check app exists
+        app = App.query.filter(App.id == appID)
+        if app.count() < 1:
+            return jsonify(error = "Unknown app", e = "app.notfound")      
+        app = app.one()
+
+        # Check we own the app
+        result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
+        if result.status_code != 200:
+            abort(401)
+        me = result.json()
+        if not me['id'] == app.developer_id:
+            return jsonify(error = "You do not have permission to modify that app", e = "permission.denied"), 403
+
+        # Check any enum fields
+        if "category" in req and not is_valid_category(req["category"]):
+            return jsonify(error = "Invalid value for field: category", e = "invalid.field.category"), 400
+
+        # Disallow change face category
+        if "category" in req and app.category == "Faces":
+            return jsonify(error = "Cannot change category for watchface", e = "disallowed.field.category"), 400
+            
+        # Update the app
+        # TODO: Find a way to do this in a loop app[x] doesn't work
+        if "title" in req:
+            app.title = req["title"]
+        if "description" in req:
+            app.description = req["description"]
+        if "category" in req:
+            app.category = category_map[req["category"]]
+        if "website" in req:
+            app.website = req["website"]
+        if "source" in req:
+            app.source = req["source"]
+
+        db.session.commit()
+
+        return jsonify(success = True)
+
+    # except Exception as e:
+    #     print(e)
+    #     traceback.print_exc()
+    #     print("Oh no")
+    #     abort(500)
+    #     return
+    
 
 def init_app(app, url_prefix='/api/v2'):
     global parent_app
