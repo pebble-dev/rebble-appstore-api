@@ -198,7 +198,12 @@ def submit_new_app():
 @devportal_api.route('/app/<appID>', methods=['POST'])
 def update_app_fields(appID):
     # try:
-        req = request.json
+
+        try:
+            req = request.json
+        except Exception as e:
+            print(e)
+            return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
 
         allowed_fields = [
             "title",
@@ -216,7 +221,7 @@ def update_app_fields(appID):
         # Check app exists
         app = App.query.filter(App.id == appID)
         if app.count() < 1:
-            return jsonify(error = "Unknown app", e = "app.notfound")      
+            return jsonify(error = "Unknown app", e = "app.notfound"), 400      
         app = app.one()
 
         # Check we own the app
@@ -239,8 +244,6 @@ def update_app_fields(appID):
         # TODO: Find a way to do this in a loop app[x] doesn't work
         if "title" in req:
             app.title = req["title"]
-        if "description" in req:
-            app.description = req["description"]
         if "category" in req:
             app.category = category_map[req["category"]]
         if "website" in req:
@@ -248,9 +251,14 @@ def update_app_fields(appID):
         if "source" in req:
             app.source = req["source"]
 
+        # Updating description requires iterating through asset collection
+        if "description" in req:
+            for x in app.asset_collections:
+                app.asset_collections[x].description = req["description"]
+
         db.session.commit()
 
-        return jsonify(success = True)
+        return jsonify(success = True, id = app.id)
 
     # except Exception as e:
     #     print(e)
