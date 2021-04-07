@@ -76,8 +76,12 @@ def submit_new_app():
                 print(appinfo)
 
             # Check app doesn't already exist
-            if App.query.filter(App.app_uuid == appinfo['uuid']).count() > 0:
-                return jsonify(error = "App already exists", e = "app.exists"), 400
+            try:
+                if App.query.filter(App.app_uuid == appinfo['uuid']).count() > 0:
+                    return jsonify(error = "An app already exists with that UUID", e = "app.exists"), 400
+            except Exception as e:
+                print(e)
+                return jsonify(error = "The UUID provided in appinfo.json is invalid", e = "invalid.uuid"), 400
 
             #--- Leaving this here because if we don't dynamically created a developer ID when we
             #    submit an app, we will need to do it on the inital /me/developer call, and handle not
@@ -180,7 +184,7 @@ def submit_new_app():
             upload_pbw_from_memory(release, request.files['pbw'])
             db.session.commit()
 
-            return jsonify(success = True)
+            return jsonify(success = True, id = app_obj.id)
 
         else:
             return jsonify(error = requestOK[1], e = requestOK[2]), 400
@@ -190,7 +194,7 @@ def submit_new_app():
         # return "OK"
     except Exception as e:
         # print(e)
-        # traceback.print_exc()
+        traceback.print_exc()
         print("Oh no")
         abort(500)
         return
@@ -239,6 +243,10 @@ def update_app_fields(appID):
         # Disallow change face category
         if "category" in req and app.category == "Faces":
             return jsonify(error = "Cannot change category for watchface", e = "disallowed.field.category"), 400
+
+        # Check title length
+        if "title" in req and len(req["title"]) > 45:
+            return jsonify(error = "Title must be less than 45 characters", e = "invalid.field.title"), 400
             
         # Update the app
         # TODO: Find a way to do this in a loop app[x] doesn't work
@@ -266,7 +274,6 @@ def update_app_fields(appID):
     #     print("Oh no")
     #     abort(500)
     #     return
-    
 
 def init_app(app, url_prefix='/api/v2'):
     global parent_app
