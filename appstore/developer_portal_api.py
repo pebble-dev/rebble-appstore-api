@@ -275,6 +275,15 @@ def update_app_fields(appID):
     #     abort(500)
     #     return
 
+@devportal_api.route('/app/<appID>', methods=['GET'])
+def redirect_to_app_api(appID):
+    # Get requests on new API should be sent back to existing API
+    response = jsonify()
+    response.status_code = 302
+    response.headers['location'] = '/api/v1/apps/id/' + appID
+    response.autocorrect_location_header = False
+    return response
+
 def init_app(app, url_prefix='/api/v2'):
     global parent_app
     parent_app = app
