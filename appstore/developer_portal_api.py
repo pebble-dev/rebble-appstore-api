@@ -9,7 +9,7 @@ from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
-from .utils import authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category
+from .utils import authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
 from .pbw_in_memory import PBW, release_from_pbw
 from .s3 import upload_pbw_from_memory, upload_asset_from_memory
@@ -71,10 +71,17 @@ def submit_new_app():
             pbw_file = request.files['pbw'].read()
             pbw = PBW(pbw_file, 'aplite')
 
-            with pbw.zip.open('appinfo.json') as f:
-                appinfo = json.load(f)
-                print(appinfo)
+            try:
+                with pbw.zip.open('appinfo.json') as f:
+                    appinfo = json.load(f)
+            except Exception as e:
+                return jsonify(error = f"Your pbw file is invalid or corrupted", e = "invalid.pbw"), 400
 
+
+            appinfo_valid = is_valid_appinfo(appinfo)
+            if not appinfo_valid[0]:
+                return jsonify(error = f"The appinfo.json in your pbw file has the following error: {appinfo_valid[1]}", e = "invalid.appinfocontent"), 400
+            
             # Check app doesn't already exist
             try:
                 if App.query.filter(App.app_uuid == appinfo['uuid']).count() > 0:
