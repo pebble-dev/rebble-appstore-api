@@ -2,6 +2,7 @@ import os
 import random
 import time
 import imghdr
+import json
 from typing import Dict, Optional
 from uuid import getnode
 
@@ -275,6 +276,44 @@ def is_valid_category(category):
     ]
 
     return (category in valid_categories)
+
+def is_valid_appinfo(appinfo_object):
+    # Currently we only need to validate so far as it's ready for the store upload
+
+    basic_required_fields = [
+        "uuid",
+        "versionLabel",
+        "sdkVersion",
+        "appKeys",
+        "longName",
+        "versionCode",
+        "shortName",
+        "capabilities",
+        "targetPlatforms",
+        "watchapp",
+        "resources"
+    ]
+
+    permitted_target_platforms = [
+        "aplite",
+        "basalt",
+        "chalk",
+        "diorite",
+        "emery"
+    ]
+
+    appinfo = appinfo_object
+
+    for f in basic_required_fields:
+        if not f in appinfo:
+            return False, f"Missing field '{f}'"
+
+    for p in appinfo["targetPlatforms"]:
+        if not p in permitted_target_platforms:
+            return False, f"Invalid target platform '{p}'"
+
+    return True, ""
+    
 
 def validate_new_app_fields(request):
     data = dict(request.form)
