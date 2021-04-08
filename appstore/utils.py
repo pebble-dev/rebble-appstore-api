@@ -2,7 +2,6 @@ import os
 import random
 import time
 import imghdr
-import json
 from typing import Dict, Optional
 from uuid import getnode
 
