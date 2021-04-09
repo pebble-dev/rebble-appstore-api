@@ -39,12 +39,6 @@ if config['ALGOLIA_ADMIN_API_KEY']:
 else:
     algolia_index = None
 
-@devportal_api.route('/test')
-def test():
-    return jsonify({
-        'success': 'true'
-    })
-
 @devportal_api.route('/submit', methods=['POST'])
 def submit_new_app():
     try:
@@ -101,7 +95,7 @@ def submit_new_app():
             #     db.session.add(developer)
             #     print(f"Created developer {developer.id}")
 
-            # Get developer ID from auth
+            # Get developer ID from auth (This is also where we check the user is authenticated)
             result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
             if result.status_code != 200:
                 abort(401)
@@ -216,18 +210,26 @@ def update_app_fields(appID):
             print(e)
             return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
 
-        allowed_fields = [
-            "title",
-            "description",
-            "category",
-            "website",
-            "source"
-        ]
+        if req is None:
+            return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
+
+        allowed_fields_type_map = {
+            "title": str,
+            "description": str,
+            "category": str,
+            "website": str,
+            "source": str,
+            "visible": str
+        }
 
         # Check all passed fields are allowed
         for x in req:
-            if not x in allowed_fields:
+            if not x in allowed_fields_type_map:
                 return jsonify(error = f"Illegal field: {x}", e = "illegal.field"), 400
+
+            if not type(x) == allowed_fields_type_map[x]:
+                return jsonify(error = f"Invalid value for field '{x}'", e = f"invalid.field.{x}"), 400
+
 
         # Check app exists
         app = App.query.filter(App.id == appID)
@@ -246,6 +248,8 @@ def update_app_fields(appID):
         # Check any enum fields
         if "category" in req and not is_valid_category(req["category"]):
             return jsonify(error = "Invalid value for field: category", e = "invalid.field.category"), 400
+        if "visible" in req and not (req["visible"].lower() == "true" or req["visible"].lower() == "false"):
+            return jsonify(error = "Invalid value for field: visible", e = "invalid.field.visible"), 400
 
         # Disallow change face category
         if "category" in req and app.category == "Faces":
@@ -265,11 +269,19 @@ def update_app_fields(appID):
             app.website = req["website"]
         if "source" in req:
             app.source = req["source"]
+        if "visible" in req:
+            # We've already check it's 'true' or 'false'
+            if req["visible"].lower() == "true":
+                app.visible = True
+            else:
+                app.visible = False
 
         # Updating description requires iterating through asset collection
         if "description" in req:
             for x in app.asset_collections:
                 app.asset_collections[x].description = req["description"]
+
+        
 
         db.session.commit()
 
