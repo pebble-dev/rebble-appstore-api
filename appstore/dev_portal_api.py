@@ -59,15 +59,25 @@ def my_apps():
         })
 
     # Get developer name
-    developer = Developer.query.filter_by(id=developer_id).one()
+    developer = Developer.query.filter_by(id=developer_id).one_or_none()
 
-    return jsonify({
+    if developer is None:
+        return jsonify({
             'id': me["id"],
             'userid': me["uid"],
-            'applications': my_appdata,
-            'name': developer.name,
             'href': request.url,
-    })
+            'applications': [],
+            'needsSetup': True
+        })
+    else:
+        return jsonify({
+                'id': me["id"],
+                'userid': me["uid"],
+                'applications': my_appdata,
+                'name': developer.name,
+                'href': request.url,
+                'needsSetup': False
+        })
 
 @legacy_api.route('/users/me/developer', methods=['POST'])
 def update_my_developer():

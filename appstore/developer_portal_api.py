@@ -39,6 +39,37 @@ if config['ALGOLIA_ADMIN_API_KEY']:
 else:
     algolia_index = None
 
+@devportal_api.route('/onboard', methods=['POST'])
+def create_developer():
+        try:
+            req = request.json
+        except Exception as e:
+            print(e)
+            return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
+
+        if req is None:
+            return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
+
+        # Get our developer ID as it exists in the user table
+        # This also checks we are authed
+        result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
+        if result.status_code != 200:
+            abort(401)
+        me = result.json()
+
+        if not "name" in req:
+            return jsonify(error = "Missing required field: name", e = "missing.field.name"), 400
+        
+        try:
+            dev = Developer.query.filter_by(id=me['id']).one()
+            return jsonify(success = True, message = "User is already onboard")
+        except NoResultFound:
+            dev = Developer(id=me['id'], name=req['name'])
+            db.session.add(dev)
+            db.session.commit()
+
+        return jsonify(success = True, id = me['id'], message = "Onboarded user")
+
 @devportal_api.route('/submit', methods=['POST'])
 def submit_new_app():
     try:
