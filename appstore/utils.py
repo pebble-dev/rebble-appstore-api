@@ -276,6 +276,16 @@ def is_valid_category(category):
 
     return (category in valid_categories)
 
+def is_valid_platform(platform):
+    valid_platforms = [
+        "aplite",
+        "basalt",
+        "chalk",
+        "diorite",
+        "emery"
+    ]
+    return platform in valid_platforms
+
 def is_valid_appinfo(appinfo_object):
     # Currently we only need to validate so far as it's ready for the store upload
 
@@ -293,14 +303,6 @@ def is_valid_appinfo(appinfo_object):
         "resources"
     ]
 
-    permitted_target_platforms = [
-        "aplite",
-        "basalt",
-        "chalk",
-        "diorite",
-        "emery"
-    ]
-
     appinfo = appinfo_object
 
     for f in basic_required_fields:
@@ -308,12 +310,11 @@ def is_valid_appinfo(appinfo_object):
             return False, f"Missing field '{f}'"
 
     for p in appinfo["targetPlatforms"]:
-        if not p in permitted_target_platforms:
+        if not is_valid_platform(p):
             return False, f"Invalid target platform '{p}'"
 
     return True, ""
     
-
 def validate_new_app_fields(request):
     data = dict(request.form)
 
