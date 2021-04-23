@@ -9,7 +9,7 @@ from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
-from .utils import authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo
+from .utils import authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
 from .pbw_in_memory import PBW, release_from_pbw
 from .s3 import upload_pbw_from_memory, upload_asset_from_memory
@@ -333,6 +333,32 @@ def redirect_to_app_api(appID):
     response.headers['location'] = '/api/v1/apps/id/' + appID
     response.autocorrect_location_header = False
     return response
+
+# Screenshots 
+@devportal_api.route('/app/<appID>/screenshots/')
+def missing_platform(appID):
+    return jsonify(error = "Missing platform", e = "platform.missing", message = "Use /app/<id>/screenshots/<platform>"), 400
+    
+@devportal_api.route('/app/<appID>/screenshots/<platform>', methods=['GET'])
+def get_app_screenshots(appID, platform):
+    # Check app exists
+
+    if not is_valid_platform(platform):
+        return jsonify(error = f"Invalid platform: {platform}", e = "platform.invalid"), 400  
+
+    app = App.query.filter(App.id == appID)
+    if app.count() < 1:
+        return jsonify(error = "Unknown app", e = "app.notfound"), 400      
+    app = app.one()
+
+    asset_collection = AssetCollection.query.filter(AssetCollection.app_id == app.id, AssetCollection.platform == platform).one_or_none()
+
+    if asset_collection is None:
+        return jsonify([])
+    else:
+        return jsonify(asset_collection.screenshots)
+
+
 
 def init_app(app, url_prefix='/api/v2'):
     global parent_app
