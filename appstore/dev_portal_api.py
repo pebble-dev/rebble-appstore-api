@@ -75,6 +75,7 @@ def my_apps():
                 'id': me["id"],
                 'userid': me["uid"],
                 'applications': my_appdata,
+                'authName': me["name"],
                 'name': developer.name,
                 'href': request.url,
                 'needsSetup': False
