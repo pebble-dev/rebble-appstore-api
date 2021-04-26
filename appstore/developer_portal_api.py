@@ -335,7 +335,7 @@ def redirect_to_app_api(appID):
     return response
 
 # Screenshots 
-@devportal_api.route('/app/<appID>/screenshots/')
+@devportal_api.route('/app/<appID>/screenshots')
 def missing_platform(appID):
     return jsonify(error = "Missing platform", e = "platform.missing", message = "Use /app/<id>/screenshots/<platform>"), 400
     
@@ -358,6 +358,36 @@ def get_app_screenshots(appID, platform):
     else:
         return jsonify(asset_collection.screenshots)
 
+@devportal_api.route('/app/<appID>/screenshots/<platform>/<screenshotID>', methods=['GET'])
+def get_screenshot(appID, platform, screenshotID):
+    response = jsonify(message = "Use assets URL for GETting screenshots")
+    response.status_code = 302
+    response.headers['location'] = 'https://assets.rebble.io/144x168/filters:upscale()/' + screenshotID
+    response.autocorrect_location_header = False
+    return response
+
+@devportal_api.route('/app/<appID>/screenshots/<platform>/<screenshotID>', methods=['DELETE'])
+def delete_screenshot(appID, platform, screenshotID):
+    app = App.query.filter(App.id == appID)
+    if app.count() < 1:
+        return jsonify(error = "Unknown app", e = "app.notfound"), 400      
+    app = app.one()
+
+    if not is_valid_platform(platform):
+        return jsonify(error = f"Invalid platform: {platform}", e = "platform.invalid"), 400  
+
+    asset_collection = AssetCollection.query.filter(AssetCollection.app_id == app.id, AssetCollection.platform == platform).one_or_none()
+
+    if asset_collection is None:
+        return jsonify(error = "Screenshot not found", e = "screenshot.invalid"), 404
+
+    if not screenshotID in asset_collection.screenshots:
+        return jsonify(error = "Screenshot not found", e = "screenshot.invalid"), 404
+
+    asset_collection.screenshots = list(filter(lambda x: x != screenshotID, asset_collection.screenshots))
+    db.session.commit()
+    return jsonify(message = f"Deleted screenshot {screenshotID}", id = screenshotID)
+        
 
 
 def init_app(app, url_prefix='/api/v2'):
