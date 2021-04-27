@@ -370,7 +370,7 @@ def get_screenshot(appID, platform, screenshotID):
 def delete_screenshot(appID, platform, screenshotID):
     app = App.query.filter(App.id == appID)
     if app.count() < 1:
-        return jsonify(error = "Unknown app", e = "app.notfound"), 400      
+        return jsonify(error = "Unknown app", e = "app.notfound"), 400
     app = app.one()
 
     if not is_valid_platform(platform):
@@ -383,6 +383,10 @@ def delete_screenshot(appID, platform, screenshotID):
 
     if not screenshotID in asset_collection.screenshots:
         return jsonify(error = "Screenshot not found", e = "screenshot.invalid"), 404
+
+    if len(asset_collection.screenshots) < 2:
+        # Not sure what code to use here. It's not 400 as the request is valid. Don't want a 200. For now returning 409 Conflict
+        return jsonify(error = "At least one screenshot required per platform", e = "screenshot.islast", message = "Cannot delete the last screenshot. Add another screenshot then retry this delete operation"), 409
 
     asset_collection.screenshots = list(filter(lambda x: x != screenshotID, asset_collection.screenshots))
     db.session.commit()
