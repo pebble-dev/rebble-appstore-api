@@ -373,6 +373,14 @@ def delete_screenshot(appID, platform, screenshotID):
         return jsonify(error = "Unknown app", e = "app.notfound"), 400
     app = app.one()
 
+     # Check we own the app
+    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
+    if result.status_code != 200:
+        abort(401)
+    me = result.json()
+    if not me['id'] == app.developer_id:
+        return jsonify(error = "You do not have permission to modify that app", e = "permission.denied"), 403
+
     if not is_valid_platform(platform):
         return jsonify(error = f"Invalid platform: {platform}", e = "platform.invalid"), 400  
 
