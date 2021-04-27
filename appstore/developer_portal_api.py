@@ -9,7 +9,7 @@ from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
-from .utils import authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform
+from .utils import authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
 from .pbw_in_memory import PBW, release_from_pbw
 from .s3 import upload_pbw_from_memory, upload_asset_from_memory
@@ -358,6 +358,50 @@ def get_app_screenshots(appID, platform):
     else:
         return jsonify(asset_collection.screenshots)
 
+@devportal_api.route('/app/<appID>/screenshots/<platform>', methods=['POST'])
+def new_app_screenshots(appID, platform):
+    app = App.query.filter(App.id == appID)
+    if app.count() < 1:
+        return jsonify(error = "Unknown app", e = "app.notfound"), 400
+    app = app.one()
+
+    # Check we own the app
+    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
+    if result.status_code != 200:
+        abort(401)
+    me = result.json()
+    if not me['id'] == app.developer_id:
+        return jsonify(error = "You do not have permission to modify that app", e = "permission.denied"), 403
+
+    if not is_valid_platform(platform):
+        return jsonify(error = f"Invalid platform: {platform}", e = "platform.invalid"), 400  
+
+    asset_collection = AssetCollection.query.filter(AssetCollection.app_id == app.id, AssetCollection.platform == platform).one_or_none()
+
+    # Get the first image, this is a single image API
+    new_image = next(iter(request.files.to_dict()))
+    new_image = request.files[new_image]
+
+    # Check it's a valid image file
+    if not is_valid_image_file(new_image):
+        return jsonify(error = "Illegal image type", e = "screenshots.illegalvalue"), 400
+
+    if asset_collection is None:
+        asset_collection = clone_asset_collection_without_images(app, platform)
+        app.asset_collections[platform] = asset_collection
+    else:
+        # Check we don't already have 5 screenshots in this asset collection
+        if len(asset_collection.screenshots) > 4:
+            return jsonify(error = "Maximum number of screenshots for platform", e = "screenshot.full", message = "There are already the maximum number of screenshots allowed for this platform. Delete one and try again"), 409
+
+    screenshots = list(asset_collection.screenshots)
+    new_image_id = upload_asset_from_memory(new_image, new_image.content_type)
+    screenshots.append(new_image_id)
+    asset_collection.screenshots = screenshots
+    db.session.commit()
+
+    return jsonify(success = True, id = new_image_id, platform = platform)
+
 @devportal_api.route('/app/<appID>/screenshots/<platform>/<screenshotID>', methods=['GET'])
 def get_screenshot(appID, platform, screenshotID):
     response = jsonify(message = "Use assets URL for GETting screenshots")
@@ -373,7 +417,7 @@ def delete_screenshot(appID, platform, screenshotID):
         return jsonify(error = "Unknown app", e = "app.notfound"), 400
     app = app.one()
 
-     # Check we own the app
+    # Check we own the app
     result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
     if result.status_code != 200:
         abort(401)
@@ -394,14 +438,12 @@ def delete_screenshot(appID, platform, screenshotID):
 
     if len(asset_collection.screenshots) < 2:
         # Not sure what code to use here. It's not 400 as the request is valid. Don't want a 200. For now returning 409 Conflict
-        return jsonify(error = "At least one screenshot required per platform", e = "screenshot.islast", message = "Cannot delete the last screenshot. Add another screenshot then retry this delete operation"), 409
+        return jsonify(error = "At least one screenshot required per platform", e = "screenshot.islast", message = "Cannot delete the last screenshot as at least one screenshot is required per platform. Add another screenshot then retry the delete operation."), 409
 
     asset_collection.screenshots = list(filter(lambda x: x != screenshotID, asset_collection.screenshots))
     db.session.commit()
-    return jsonify(message = f"Deleted screenshot {screenshotID}", id = screenshotID)
+    return jsonify(message = f"Deleted screenshot {screenshotID}", id = screenshotID, platform = platform)
         
-
-
 def init_app(app, url_prefix='/api/v2'):
     global parent_app
     parent_app = app

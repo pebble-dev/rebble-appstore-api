@@ -40,6 +40,21 @@ plat_dimensions = {
     'emery': (200, 228),
 }
 
+valid_platforms = [
+        "aplite",
+        "basalt",
+        "chalk",
+        "diorite",
+        "emery"
+]
+
+permitted_image_types = [
+    "png",
+    "jpeg",
+    "gif",
+    "bmp"
+]
+
 
 def init_app(app):
     global parent_app
@@ -277,13 +292,6 @@ def is_valid_category(category):
     return (category in valid_categories)
 
 def is_valid_platform(platform):
-    valid_platforms = [
-        "aplite",
-        "basalt",
-        "chalk",
-        "diorite",
-        "emery"
-    ]
     return platform in valid_platforms
 
 def is_valid_appinfo(appinfo_object):
@@ -326,13 +334,6 @@ def validate_new_app_fields(request):
         "category"
     ]
 
-    permitted_image_types = [
-        "png",
-        "jpeg",
-        "gif",
-        "bmp"
-    ]
-
     screenshot_platforms = [
         "aplite",
         "basalt",
@@ -340,7 +341,6 @@ def validate_new_app_fields(request):
         "diorite",
     ]
     
-
     # First we check we have all the always required fields
     if not all (k in data for k in required_fields):
         return False, "Missing a required field", "field.missing"
@@ -399,3 +399,25 @@ def validate_new_app_fields(request):
     # If you are here, you are good to go
 
     return True, ""
+
+def clone_asset_collection_without_images(appObject, platform):
+    # Find an existing asset collection for AppID and clone the header and desc. Used for uploading new screenshots to a previously nonexisted asset collection
+    # We take an app object as calling func. will have already done a lookup
+    for p in valid_platforms:
+        og_asset_collection = AssetCollection.query.filter(AssetCollection.app_id == appObject.id, AssetCollection.platform == p).one_or_none()
+        if not og_asset_collection is None:
+            break
+
+    clone_asset_collection = AssetCollection(
+                platform=platform,
+                description=og_asset_collection.description,
+                screenshots=[],
+                headers = og_asset_collection.headers,
+                banner = og_asset_collection.banner
+    )
+
+    return clone_asset_collection
+
+def is_valid_image_file(file):
+    imgtype = imghdr.what(file)
+    return imgtype in permitted_image_types
