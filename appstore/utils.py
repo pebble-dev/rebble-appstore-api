@@ -364,30 +364,19 @@ def validate_new_app_fields(request):
         return False, "Missing file: large_icon", "large_icon.missing"
 
     # Check we have screenshots
-    # We'll either use the generic screenshots for all platforms
-    # or we use the platform specific screenshots
     # We must have at least 1 screenshot in total
     # Here we also validate it's an image file
 
     atLeastOneScreenshot = False
-    if "screenshot-generic-1" in request.files:
+    for platform in screenshot_platforms:
+        print(platform)
         for x in range(6):
-            if f"screenshot-generic-{x}" in request.files:
-                imgtype = imghdr.what(request.files[f"screenshot-generic-{x}"])
+             if f"screenshot-{platform}-{x}" in request.files:
+                imgtype = imghdr.what(request.files[f"screenshot-{platform}-{x}"])
                 if imgtype in permitted_image_types:
                     atLeastOneScreenshot = True
                 else:
                     return False, "Illegal image type: " + str(imgtype), "screenshots.illegalvalue"
-    else:
-        for platform in screenshot_platforms:
-            print(platform)
-            for x in range(6):
-                 if f"screenshot-{platform}-{x}" in request.files:
-                    imgtype = imghdr.what(request.files[f"screenshot-{platform}-{x}"])
-                    if imgtype in permitted_image_types:
-                        atLeastOneScreenshot = True
-                    else:
-                        return False, "Illegal image type: " + str(imgtype), "screenshots.illegalvalue"
 
     if not atLeastOneScreenshot:
         return False, "No screenshots provided", "screenshots.noneprovided"
