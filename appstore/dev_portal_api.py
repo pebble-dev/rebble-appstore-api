@@ -48,6 +48,7 @@ def my_apps():
     if result.status_code != 200:
         abort(401)
     me = result.json()
+
     developer_id = me['id']
     # Get apps
     my_apps = [x for x in App.query.filter_by(developer_id=developer_id)]
@@ -61,6 +62,13 @@ def my_apps():
     # Get developer name
     developer = Developer.query.filter_by(id=developer_id).one_or_none()
 
+    # Check if is wizard (Can we update auth to return this with /me/pebble/appstore?)
+    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
+    if result.status_code != 200:
+        abort(401)
+    me_detailed = result.json()
+    me["is_wizard"] = me_detailed["is_wizard"]
+
     if developer is None:
         return jsonify({
             'id': me["id"],
@@ -68,22 +76,23 @@ def my_apps():
             'href': request.url,
             'authName': me["name"],
             'applications': [],
-            'needsSetup': True
+            'needsSetup': True,
+            'w': me["is_wizard"]
         })
     else:
         return jsonify({
                 'id': me["id"],
                 'userid': me["uid"],
-                'applications': my_appdata,
-                'authName': me["name"],
-                'name': developer.name,
                 'href': request.url,
-                'needsSetup': False
+                'authName': me["name"],
+                'applications': my_appdata,
+                'name': developer.name,
+                'needsSetup': False,
+                'w': me["is_wizard"]
         })
 
 @legacy_api.route('/users/me/developer', methods=['POST'])
 def update_my_developer():
-    # Validate request
     permitted_fields = ["name"]
 
     try:
