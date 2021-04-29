@@ -14,6 +14,7 @@ from .models import Category, db, App, Developer, Release, CompanionApp, Binary,
 from .pbw_in_memory import PBW, release_from_pbw
 from .s3 import upload_pbw_from_memory, upload_asset_from_memory
 from .settings import config
+from .discord import announce_release, announce_new_app
 
 
 parent_app = None
@@ -90,11 +91,11 @@ def submit_new_app():
                 "diorite": []
             }
 
-            # Create temp dir to put files in
-            # working_dir_path = tempfile.mkdtemp()
-
-            pbw_file = request.files['pbw'].read()
-            pbw = PBW(pbw_file, 'aplite')
+            try:
+                pbw_file = request.files['pbw'].read()
+                pbw = PBW(pbw_file, 'aplite')
+            except Exception as e:
+                return jsonify(error = f"Your pbw file is invalid or corrupted", e = "invalid.pbw"), 400
 
             try:
                 with pbw.zip.open('appinfo.json') as f:
@@ -216,6 +217,9 @@ def submit_new_app():
             upload_pbw_from_memory(release, request.files['pbw'])
             db.session.commit()
 
+            if algolia_index:
+                algolia_index.partial_update_objects([algolia_app(app_obj)], { 'createIfNotExists': True })
+
             return jsonify(success = True, id = app_obj.id)
 
         else:
@@ -312,18 +316,11 @@ def update_app_fields(appID):
             for x in app.asset_collections:
                 app.asset_collections[x].description = req["description"]
 
-        
+        announce_new_app(app)
 
         db.session.commit()
 
         return jsonify(success = True, id = app.id)
-
-    # except Exception as e:
-    #     print(e)
-    #     traceback.print_exc()
-    #     print("Oh no")
-    #     abort(500)
-    #     return
 
 @devportal_api.route('/app/<appID>', methods=['GET'])
 def redirect_to_app_api(appID):
@@ -333,6 +330,76 @@ def redirect_to_app_api(appID):
     response.headers['location'] = '/api/v1/apps/id/' + appID
     response.autocorrect_location_header = False
     return response
+
+@devportal_api.route('/app/<appID>/release', methods=['POST'])
+def submit_new_release(appID):
+    app = App.query.filter(App.id == appID)
+    if app.count() < 1:
+        return jsonify(error = "Unknown app", e = "app.notfound"), 400
+    app = app.one()
+
+    # Check we own the app
+    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
+    if result.status_code != 200:
+        abort(401)
+    me = result.json()
+    if not me['id'] == app.developer_id:
+        return jsonify(error = "You do not have permission to modify that app", e = "permission.denied"), 403
+
+    data = dict(request.form)
+
+    if not "pbw" in request.files:
+        return jsonify(error = "Missing file: pbw", e = "pbw.missing"), 400
+
+    if not "release_notes" in data:
+        return jsonify(error = "Missing file: pbw", e = "release_notes.missing"), 400
+
+    try:   
+        pbw_file = request.files['pbw'].read()
+
+        try:
+            pbw = PBW(pbw_file, 'aplite')
+        except Exception as e:
+            return jsonify(error = f"Your pbw file is invalid or corrupted", e = "invalid.pbw"), 400
+
+        try:
+            with pbw.zip.open('appinfo.json') as f:
+                appinfo = json.load(f)
+        except Exception as e:
+            return jsonify(error = f"Your pbw file is invalid or corrupted", e = "invalid.pbw"), 400
+
+        appinfo_valid = is_valid_appinfo(appinfo)
+        if not appinfo_valid[0]:
+            return jsonify(error = f"The appinfo.json in your pbw file has the following error: {appinfo_valid[1]}", e = "invalid.appinfocontent"), 400
+
+        uuid = appinfo['uuid']
+        version = appinfo['versionLabel']
+        
+        if not uuid == app.app_uuid:
+            return jsonify(error = "The UUID in appinfo.json does not match the app you are trying to update", e = "uuid.mismatch"), 400
+
+        release_old = Release.query.filter_by(app = app).order_by(Release.published_date.desc()).limit(1).one()
+
+        if version == release_old.version:
+            return jsonify(error = f"The version ({version}) is already on the appstore", e = "version.exists", message = "The app version in appinfo.json is not greater than the latest release on the store. Please increment versionLabel in your appinfo.json and try again."), 400
+
+        release_new = release_from_pbw(app, pbw_file,
+                                       release_notes = data["release_notes"],
+                                       published_date = datetime.datetime.utcnow(),
+                                       version = version,
+                                       compatibility = release_old.compatibility)
+
+        upload_pbw_from_memory(release_new, request.files['pbw'])
+        db.session.commit()
+
+        announce_release(app, release_new)
+
+        return jsonify(success = True)
+        
+    except Exception as e:
+        traceback.print_exc()
+        print("Oh no")
+        abort(500)
 
 # Screenshots 
 @devportal_api.route('/app/<appID>/screenshots')

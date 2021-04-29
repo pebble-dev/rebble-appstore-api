@@ -410,3 +410,8 @@ def clone_asset_collection_without_images(appObject, platform):
 def is_valid_image_file(file):
     imgtype = imghdr.what(file)
     return imgtype in permitted_image_types
+
+def get_app_description(app):
+    for p in valid_platforms:
+        if p in app.asset_collections:
+            return app.asset_collections[p].description
