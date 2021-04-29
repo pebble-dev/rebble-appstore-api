@@ -220,6 +220,8 @@ def submit_new_app():
             if algolia_index:
                 algolia_index.partial_update_objects([algolia_app(app_obj)], { 'createIfNotExists': True })
 
+            announce_new_app(app)
+
             return jsonify(success = True, id = app_obj.id)
 
         else:
@@ -315,8 +317,6 @@ def update_app_fields(appID):
         if "description" in req:
             for x in app.asset_collections:
                 app.asset_collections[x].description = req["description"]
-
-        announce_new_app(app)
 
         db.session.commit()
 
