@@ -4,8 +4,7 @@ import random
 
 from .settings import config
 from .utils import get_app_description
-from flask import Blueprint, jsonify, abort
-from appstore.models import App, AssetCollection, CompanionApp
+from appstore.models import App
 
 party_time_emoji = ["🎉","🥳","👏","❤️","🥰","🎊"]
 
