@@ -220,7 +220,7 @@ def submit_new_app():
             if algolia_index:
                 algolia_index.partial_update_objects([algolia_app(app_obj)], { 'createIfNotExists': True })
 
-            announce_new_app(app)
+            announce_new_app(app_obj)
 
             return jsonify(success = True, id = app_obj.id)
 
@@ -319,6 +319,8 @@ def update_app_fields(appID):
                 app.asset_collections[x].description = req["description"]
 
         db.session.commit()
+        if algolia_index:
+            algolia_index.partial_update_objects([algolia_app(app)], { 'createIfNotExists': False })
 
         return jsonify(success = True, id = app.id)
 
@@ -511,6 +513,109 @@ def delete_screenshot(appID, platform, screenshotID):
     db.session.commit()
     return jsonify(message = f"Deleted screenshot {screenshotID}", id = screenshotID, platform = platform)
         
+@devportal_api.route('/wizard/rename/<developerID>', methods=['POST'])
+def wizard_rename_developer(developerID):
+    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
+    if result.status_code != 200:
+        abort(401)
+    me = result.json()
+    if not me['is_wizard']:
+        return jsonify(error = "You are not a wizard", e = "permission.denied"), 403
+
+    permitted_fields = ["name"]
+
+    try:
+        req = request.json
+    except Exception as e:
+        print(e)
+        return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
+
+    if req is None:
+        return jsonify(error = "Invalid POST body. Expected JSON and 'Content-Type: application/json'", e = "request.invalid"), 400
+
+    for f in req:
+        if not f in permitted_fields:
+            return jsonify(error = f"Illegal field: {f}", e = "illegal.field"), 400
+
+    if not "name" in req:
+        return jsonify(error = f"Missing required field: name", e = "missing.field.name"), 400
+
+    
+    developer = Developer.query.filter_by(id=developerID).one_or_none()
+    if developer is None:
+        return jsonify(error = "Developer not found", e = "id.invalid"), 404
+    developer.name = req["name"]
+    db.session.commit()
+
+    return jsonify(success = True, id = developer.id, name = developer.name)
+
+@devportal_api.route('/wizard/app/<appID>', methods=['DELETE'])
+def wizard_delete_app(appID):
+    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
+    if result.status_code != 200:
+        abort(401)
+    me = result.json()
+    if not me['is_wizard']:
+        return jsonify(error = "You are not a wizard", e = "permission.denied"), 403
+    
+    app = App.query.filter(App.id == appID).one_or_none()
+    if app is None:
+        return jsonify(error = "Unknown app", e = "app.notfound"), 404
+
+    assets = AssetCollection.query.filter(AssetCollection.app_id == appID)
+    assets.delete()
+
+    releases = Release.query.filter(Release.app_id == appID)
+    for r in releases:
+        binaries = Binary.query.filter(Binary.release_id == r.id)
+        binaries.delete()
+    releases.delete()
+
+    likes = UserLike.query.filter(UserLike.app_id == appID)
+    likes.delete()
+
+    App.query.filter(App.id == appID).delete()
+
+    # TODO: Check if we need to delete lock lines actively
+
+    db.session.commit()
+
+    if algolia_index:
+        algolia_index.partial_update_objects([algolia_app(app)], { 'createIfNotExists': False })
+
+    return jsonify(success = True, id = app.id)
+
+@devportal_api.route('/wizard/app/<appID>', methods=['GET'])
+def wizard_get_s3_assets(appID):
+    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
+    if result.status_code != 200:
+        abort(401)
+    me = result.json()
+    if not me['is_wizard']:
+        return jsonify(error = "You are not a wizard", e = "permission.denied"), 403
+    
+    app = App.query.filter(App.id == appID).one_or_none()
+    if app is None:
+        return jsonify(error = "Unknown app", e = "app.notfound"), 404
+
+    images = []
+    pbws = []
+
+    images.append(app.icon_large)
+    images.append(app.icon_small)
+
+    assets = AssetCollection.query.filter(AssetCollection.app_id == appID)
+    for a in assets:
+        images = images + a.screenshots
+        images = images + a.headers
+
+    releases = Release.query.filter(Release.app_id == appID)
+    for r in releases:
+        pbws.append(r.id)
+
+
+    return jsonify(images = images, pbws = pbws)
+
 def init_app(app, url_prefix='/api/v2'):
     global parent_app
     parent_app = app
