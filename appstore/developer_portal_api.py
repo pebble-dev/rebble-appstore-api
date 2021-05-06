@@ -581,7 +581,7 @@ def wizard_delete_app(appID):
     db.session.commit()
 
     if algolia_index:
-        algolia_index.partial_update_objects([algolia_app(app)], { 'createIfNotExists': False })
+        algolia_index.delete_objects([algolia_app(app)])
 
     return jsonify(success = True, id = app.id)
 
