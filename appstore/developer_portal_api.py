@@ -11,7 +11,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from .utils import authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
-from .pbw_in_memory import PBW, release_from_pbw
+from .pbw import PBW, release_from_pbw
 from .s3 import upload_pbw_from_memory, upload_asset_from_memory
 from .settings import config
 from .discord import announce_release, announce_new_app
@@ -95,13 +95,14 @@ def submit_new_app():
                 pbw_file = request.files['pbw'].read()
                 pbw = PBW(pbw_file, 'aplite')
             except Exception as e:
-                return jsonify(error = f"Your pbw file is invalid or corrupted", e = "invalid.pbw"), 400
+                print(e)
+                return jsonify(error = f"Your pbw file is corrupt or invalid", e = "invalid.pbw"), 400
 
             try:
                 with pbw.zip.open('appinfo.json') as f:
                     appinfo = json.load(f)
             except Exception as e:
-                return jsonify(error = f"Your pbw file is invalid or corrupted", e = "invalid.pbw"), 400
+                return jsonify(error = f"Your pbw file is invalid or corrupt", e = "invalid.pbw"), 400
 
 
             appinfo_valid = is_valid_appinfo(appinfo)
@@ -113,7 +114,6 @@ def submit_new_app():
                 if App.query.filter(App.app_uuid == appinfo['uuid']).count() > 0:
                     return jsonify(error = "An app already exists with that UUID", e = "app.exists"), 400
             except Exception as e:
-                print(e)
                 return jsonify(error = "The UUID provided in appinfo.json is invalid", e = "invalid.uuid"), 400
 
             #--- Leaving this here because if we don't dynamically created a developer ID when we
@@ -562,21 +562,7 @@ def wizard_delete_app(appID):
     if app is None:
         return jsonify(error = "Unknown app", e = "app.notfound"), 404
 
-    assets = AssetCollection.query.filter(AssetCollection.app_id == appID)
-    assets.delete()
-
-    releases = Release.query.filter(Release.app_id == appID)
-    for r in releases:
-        binaries = Binary.query.filter(Binary.release_id == r.id)
-        binaries.delete()
-    releases.delete()
-
-    likes = UserLike.query.filter(UserLike.app_id == appID)
-    likes.delete()
-
     App.query.filter(App.id == appID).delete()
-
-    # TODO: Check if we need to delete lock lines actively
 
     db.session.commit()
 
