@@ -158,14 +158,6 @@ def submit_new_app():
                 if not x in params:
                     params[x] = ""
 
-            # for x in screenshots:
-            #     print(f"platform: {x}")
-            #     desc = data["description"]
-            #     print(f"description: {desc}")
-            #     print(f"screenshots:")
-            #     for s in screenshots[x]:
-            #         print(f"Screenshot: {s}")
-
             app_obj = App(
                 id = id_generator.generate(),
                 app_uuid = appinfo['uuid'],
@@ -184,8 +176,6 @@ def submit_new_app():
                 releases = [],
                 icon_large = upload_asset_from_memory(request.files['large_icon'], request.files["large_icon"].content_type),
                 icon_small = upload_asset_from_memory(request.files['small_icon'], request.files["small_icon"].content_type) if 'small_icon' in params else '',
-                #icon_large = "",
-                #icon_small = "",
                 source = params['source'],
                 title = params['title'],
                 type = params['type'],
@@ -214,11 +204,7 @@ def submit_new_app():
         else:
             return jsonify(error = requestOK[1], e = requestOK[2]), 400
 
-        # pbw = request.files['pbw']
-        # print(pbw.readlines())
-        # return "OK"
     except Exception as e:
-        # print(e)
         traceback.print_exc()
         print("Oh no")
         abort(500)
