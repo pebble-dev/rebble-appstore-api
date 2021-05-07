@@ -134,8 +134,6 @@ def submit_new_app():
             else:
                 header_asset = None
 
-            print(jsonify(screenshots))
-
             # Copy screenshots to platform map
             if "screenshot-generic-1" in request.files:
                 for x in range(6):
