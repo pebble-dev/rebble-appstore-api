@@ -95,7 +95,6 @@ def submit_new_app():
                 pbw_file = request.files['pbw'].read()
                 pbw = PBW(pbw_file, 'aplite')
             except Exception as e:
-                print(e)
                 return jsonify(error = f"Your pbw file is corrupt or invalid", e = "invalid.pbw"), 400
 
             try:
@@ -116,32 +115,22 @@ def submit_new_app():
             except Exception as e:
                 return jsonify(error = "The UUID provided in appinfo.json is invalid", e = "invalid.uuid"), 400
 
-            #--- Leaving this here because if we don't dynamically created a developer ID when we
-            #    submit an app, we will need to do it on the inital /me/developer call, and handle not
-            #     having one here.
-
-            # if 'developer_id' in params:
-            #     developer = Developer.query.filter(Developer.id == params['developer_id']).one()
-            # else:
-            #     developer = Developer(id = id_generator.generate(), name = appinfo['companyName'])
-            #     db.session.add(developer)
-            #     print(f"Created developer {developer.id}")
-
             # Get developer ID from auth (This is also where we check the user is authenticated)
             result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
             if result.status_code != 200:
                 abort(401)
             me = result.json()
             developer_id = me['id']
-            print("Our developer ID is " + developer_id)
 
             # Find developer
-            developer = Developer.query.filter(Developer.id == developer_id).one()
+            developer = Developer.query.filter(Developer.id == developer_id).one_or_none()
+
+            if developer is None:
+                return jsonify(error = "You do not have an active developer account.", e = "account.invalid", message = "Please visit dev-portal.rebble.io to activate your developer account"), 409
 
             # Upload banner if present
             if "banner" in request.files:
                 header_asset = upload_asset_from_memory(request.files["banner"], request.files["banner"].content_type)
-                # header_asset = "6064be425848b2c6d818149a"
             else:
                 header_asset = None
 
