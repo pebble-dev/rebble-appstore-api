@@ -340,13 +340,21 @@ def validate_new_app_fields(request):
         "chalk",
         "diorite",
     ]
+
+    permitted_sub_types = [
+        "watchface",
+        "watchapp"
+    ]
     
     # First we check we have all the always required fields
     if not all (k in data for k in required_fields):
         return False, "Missing a required field", "field.missing"
 
+    if not data["type"] in permitted_sub_types:
+        return False, "Invalid submission type. Expected watchface or watchapp", "subtype.illegal"
+
     # If we have an app, check app-specific fields
-    if data["type"] == "app":
+    if data["type"] == "watchapp":
         if not "category" in data:
             return False, "Missing field: category", "category.missing"
 
