@@ -131,9 +131,9 @@ def submit_new_app():
 
             # Copy screenshots to platform map
             for platform in screenshots:
-            for x in range(6):
-                if f"screenshot-{platform}-{x}" in request.files:
-                    screenshots[platform].append(request.files[f"screenshot-{platform}-{x}"])
+                for x in range(6):
+                    if f"screenshot-{platform}-{x}" in request.files:
+                        screenshots[platform].append(request.files[f"screenshot-{platform}-{x}"])
 
             # Remove any platforms with no screenshots
             clearedScreenshots = dict(screenshots)
