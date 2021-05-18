@@ -33,7 +33,6 @@ category_map = {
                 'GetSomeApps': '52ccee3151a80d28e100003e',
             }
 
-# Do we need this?
 if config['ALGOLIA_ADMIN_API_KEY']:
     algolia_client = algoliasearch.Client(config['ALGOLIA_APP_ID'], config['ALGOLIA_ADMIN_API_KEY'])
     algolia_index = algolia_client.init_index(config['ALGOLIA_INDEX'])
@@ -51,8 +50,6 @@ def create_developer():
         if req is None:
             return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
 
-        # Get our developer ID as it exists in the user table
-        # This also checks we are authed
         result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
         if result.status_code != 200:
             abort(401)
@@ -79,8 +76,6 @@ def submit_new_app():
         requestOK = validate_new_app_fields(request)
 
         if requestOK[0] == True:
-
-            # Required fields are there, let's upload
 
             params = dict(request.form)
 
@@ -135,16 +130,10 @@ def submit_new_app():
                 header_asset = None
 
             # Copy screenshots to platform map
-            if "screenshot-generic-1" in request.files:
-                for x in range(6):
-                    if f"screenshot-generic-{x}" in request.files:
-                        for platform in screenshots:
-                            screenshots[platform].append(request.files[f"screenshot-generic-{x}"])
-            else:
-                for platform in screenshots:
-                    for x in range(6):
-                        if f"screenshot-{platform}-{x}" in request.files:
-                            screenshots[platform].append(request.files[f"screenshot-{platform}-{x}"])
+            for platform in screenshots:
+            for x in range(6):
+                if f"screenshot-{platform}-{x}" in request.files:
+                    screenshots[platform].append(request.files[f"screenshot-{platform}-{x}"])
 
             # Remove any platforms with no screenshots
             clearedScreenshots = dict(screenshots)
@@ -327,7 +316,7 @@ def submit_new_release(appID):
         return jsonify(error = "Missing file: pbw", e = "pbw.missing"), 400
 
     if not "release_notes" in data:
-        return jsonify(error = "Missing file: pbw", e = "release_notes.missing"), 400
+        return jsonify(error = "Missing field: release_notes", e = "release_notes.missing"), 400
 
     try:   
         pbw_file = request.files['pbw'].read()
@@ -484,7 +473,7 @@ def delete_screenshot(appID, platform, screenshotID):
 
     asset_collection.screenshots = list(filter(lambda x: x != screenshotID, asset_collection.screenshots))
     db.session.commit()
-    return jsonify(message = f"Deleted screenshot {screenshotID}", id = screenshotID, platform = platform)
+    return jsonify(success = True, message = f"Deleted screenshot {screenshotID}", id = screenshotID, platform = platform)
         
 @devportal_api.route('/wizard/rename/<developerID>', methods=['POST'])
 def wizard_rename_developer(developerID):
