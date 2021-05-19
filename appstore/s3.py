@@ -25,42 +25,37 @@ if not session:
 
 def upload_pbw(release, file):
     filename = f"{config['S3_PATH']}{release.id}.pbw"
-    print(f"uploading file {file} to {config['S3_BUCKET']}:{filename}")
-    
-    s3 = session.client('s3')
-    s3.upload_file(file, config['S3_BUCKET'], filename)
 
-def upload_pbw_from_memory(release, fileObject):
-    filename = f"{config['S3_PATH']}{release.id}.pbw"
-    print(f"uploading file object {fileObject.name} to {config['S3_BUCKET']}:{filename}")
-    
-    s3 = session.client('s3')
-    s3.upload_fileobj(fileObject, config['S3_BUCKET'], filename, ExtraArgs = {'ContentType': 'application/zip'})
+    if type(file) is str:
+        print(f"uploading file {file} to {config['S3_BUCKET']}:{filename}")
+        s3 = session.client('s3')
+        s3.upload_file(file, config['S3_BUCKET'], filename)
+    else:
+        print(f"uploading file object {file.name} to {config['S3_BUCKET']}:{filename}")   
+        s3 = session.client('s3')
+        s3.upload_fileobj(file, config['S3_BUCKET'], filename, ExtraArgs = {'ContentType': 'application/zip'})   
 
 def upload_asset(file, mime_type = None):
     id = id_generator.generate()
     filename = f"{config['S3_ASSET_PATH']}{id}"
-    print(f"uploading file {file} to {config['S3_ASSET_BUCKET']}:{filename}")
-    
-    if mime_type is None:
-        if file.endswith(".gif"):
-            mime_type = "image/gif"
-        elif file.endswith(".jpg") or file.endswith(".jpeg"):
-            mime_type = "image/jpeg"
-        else:
-            mime_type = "image/png"
-    
-    s3 = session.client('s3')
-    s3.upload_file(file, config['S3_ASSET_BUCKET'], filename, ExtraArgs = {'ContentType': mime_type})
-    
-    return id
 
-def upload_asset_from_memory(fileObject, mime_type):
-    id = id_generator.generate()
-    filename = f"{config['S3_ASSET_PATH']}{id}"
-    print(f"uploading file object '{fileObject.name}' to {config['S3_ASSET_BUCKET']}:{filename}")
+    if type(file) is str:
+        print(f"uploading file {file} to {config['S3_ASSET_BUCKET']}:{filename}")
+        if mime_type is None:
+            if file.endswith(".gif"):
+                mime_type = "image/gif"
+            elif file.endswith(".jpg") or file.endswith(".jpeg"):
+                mime_type = "image/jpeg"
+            else:
+                mime_type = "image/png"
+
+        s3 = session.client('s3')
+        s3.upload_file(file, config['S3_ASSET_BUCKET'], filename, ExtraArgs = {'ContentType': mime_type})
+        return id
     
-    s3 = session.client('s3')
-    s3.upload_fileobj(fileObject, config['S3_ASSET_BUCKET'], filename, ExtraArgs = {'ContentType': mime_type})
+    else:
+        print(f"uploading file object '{file.name}' to {config['S3_ASSET_BUCKET']}:{filename}")
+        s3 = session.client('s3')
+        s3.upload_fileobj(file, config['S3_ASSET_BUCKET'], filename, ExtraArgs = {'ContentType': mime_type})
     
-    return id
+    return id    

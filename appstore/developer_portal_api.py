@@ -12,7 +12,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from .utils import authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
 from .pbw import PBW, release_from_pbw
-from .s3 import upload_pbw_from_memory, upload_asset_from_memory
+from .s3 import upload_pbw, upload_asset
 from .settings import config
 from .discord import announce_release, announce_new_app
 
@@ -125,7 +125,7 @@ def submit_new_app():
 
             # Upload banner if present
             if "banner" in request.files:
-                header_asset = upload_asset_from_memory(request.files["banner"], request.files["banner"].content_type)
+                header_asset = upload_asset(request.files["banner"], request.files["banner"].content_type)
             else:
                 header_asset = None
 
@@ -153,7 +153,7 @@ def submit_new_app():
                 asset_collections = { x: AssetCollection(
                     platform=x,
                     description=params['description'],
-                    screenshots=[upload_asset_from_memory(s, s.content_type) for s in screenshots[x]],
+                    screenshots=[upload_asset(s, s.content_type) for s in screenshots[x]],
                     headers = [header_asset] if header_asset else [],
                     banner = None
                 ) for x in screenshots},
@@ -163,8 +163,8 @@ def submit_new_app():
                 developer = developer,
                 hearts = 0,
                 releases = [],
-                icon_large = upload_asset_from_memory(request.files['large_icon'], request.files["large_icon"].content_type),
-                icon_small = upload_asset_from_memory(request.files['small_icon'], request.files["small_icon"].content_type) if 'small_icon' in params else '',
+                icon_large = upload_asset(request.files['large_icon'], request.files["large_icon"].content_type),
+                icon_small = upload_asset(request.files['small_icon'], request.files["small_icon"].content_type) if 'small_icon' in params else '',
                 source = params['source'],
                 title = params['title'],
                 type = params['type'],
@@ -180,7 +180,7 @@ def submit_new_app():
                                        version = appinfo['versionLabel'],
                                        compatibility = appinfo.get('targetPlatforms', [ 'aplite', 'basalt', 'diorite', 'emery' ]))
             print(f"Created release {release.id}")
-            upload_pbw_from_memory(release, request.files['pbw'])
+            upload_pbw(release, request.files['pbw'])
             db.session.commit()
 
             if algolia_index:
@@ -201,8 +201,6 @@ def submit_new_app():
 
 @devportal_api.route('/app/<appID>', methods=['POST'])
 def update_app_fields(appID):
-    # try:
-
         try:
             req = request.json
         except Exception as e:
@@ -353,7 +351,7 @@ def submit_new_release(appID):
                                        version = version,
                                        compatibility = release_old.compatibility)
 
-        upload_pbw_from_memory(release_new, request.files['pbw'])
+        upload_pbw(release_new, request.files['pbw'])
         db.session.commit()
 
         announce_release(app, release_new)
@@ -426,7 +424,7 @@ def new_app_screenshots(appID, platform):
             return jsonify(error = "Maximum number of screenshots for platform", e = "screenshot.full", message = "There are already the maximum number of screenshots allowed for this platform. Delete one and try again"), 409
 
     screenshots = list(asset_collection.screenshots)
-    new_image_id = upload_asset_from_memory(new_image, new_image.content_type)
+    new_image_id = upload_asset(new_image, new_image.content_type)
     screenshots.append(new_image_id)
     asset_collection.screenshots = screenshots
     db.session.commit()
@@ -549,18 +547,25 @@ def wizard_get_s3_assets(appID):
     images = []
     pbws = []
 
-    images.append(app.icon_large)
-    images.append(app.icon_small)
+    if len(app.icon_large) > 0:
+        images.append(app.icon_large) 
+    if len(app.icon_small) > 0:
+        images.append(app.icon_small)
 
     assets = AssetCollection.query.filter(AssetCollection.app_id == appID)
     for a in assets:
-        images = images + a.screenshots
-        images = images + a.headers
+        if len(a.screenshots) > 0:
+            images = images + a.screenshots
+        if len(a.headers) > 0:
+            images = images + a.headers
 
     releases = Release.query.filter(Release.app_id == appID)
     for r in releases:
         pbws.append(r.id)
 
+    # Remove duplicates
+    images = list(dict.fromkeys(images))
+    pbws = list(dict.fromkeys(pbws))
 
     return jsonify(images = images, pbws = pbws)
 
