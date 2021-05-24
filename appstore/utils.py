@@ -205,9 +205,9 @@ def generate_image_url(img, width=None, height=None, force=False):
         return ''
     url = parent_app.config['IMAGE_ROOT']
     if width is not None or height is not None:
-        if not force:
-            url += '/fit-in'
-        url += f"/{width or ''}x{height or ''}/filters:upscale()"
+        if force:
+            url += '/exact'
+        url += f"/{width or ''}x{height or ''}"
     url += f"/{img}"
     return url
 
