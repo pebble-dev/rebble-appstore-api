@@ -9,7 +9,7 @@ from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
-from .utils import authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file
+from .utils import authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file, generate_image_url
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
 from .pbw import PBW, release_from_pbw
 from .s3 import upload_pbw, upload_asset
@@ -287,7 +287,7 @@ def update_app_fields(appID):
 @devportal_api.route('/app/<appID>', methods=['GET'])
 def redirect_to_app_api(appID):
     # Get requests on new API should be sent back to existing API
-    response = jsonify()
+    response = jsonify(message = "Redirecting to correct API endpoint")
     response.status_code = 302
     response.headers['location'] = '/api/v1/apps/id/' + appID
     response.autocorrect_location_header = False
@@ -435,7 +435,7 @@ def new_app_screenshots(appID, platform):
 def get_screenshot(appID, platform, screenshotID):
     response = jsonify(message = "Use assets URL for GETting screenshots")
     response.status_code = 302
-    response.headers['location'] = 'https://assets.rebble.io/144x168/filters:upscale()/' + screenshotID
+    response.headers['location'] = generate_image_url(screenshotID)
     response.autocorrect_location_header = False
     return response
 
