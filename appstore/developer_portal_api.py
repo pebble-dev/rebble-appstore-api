@@ -509,6 +509,59 @@ def wizard_rename_developer(developerID):
 
     return jsonify(success = True, id = developer.id, name = developer.name)
 
+@devportal_api.route('/wizard/app/<appID>', methods=['POST'])
+def wizard_update_app(appID):
+    # Update app as a wizard. Currently only allowed field is developer_id 
+    allowed_fields = [
+        "developer_id"
+    ]
+
+    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
+    if result.status_code != 200:
+        abort(401)
+    me = result.json()
+    if not me['is_wizard']:
+        return jsonify(error = "You are not a wizard", e = "permission.denied"), 403
+
+    try:
+        req = request.json
+    except Exception as e:
+        print(e)
+        return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
+
+    if req is None:
+        return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
+
+
+    for x in req:
+        if not x in allowed_fields:
+            return jsonify(error = f"Illegal field: {x}", e = "illegal.field"), 400
+
+    app = App.query.filter(App.id == appID).one_or_none()
+
+    if app is None:
+        return jsonify(error = "Unknown app", e = "app.notfound"), 404
+
+    changeOccured = False
+
+    if "developer_id" in req:
+            app.developer_id = req["developer_id"]
+            changeOccured = True
+            # return jsonify(error = "Failed to update developer ID. New ID does not exist", e = "newid.invalid"), 400
+
+
+    
+    if changeOccured:
+        try:
+            db.session.commit()
+            return jsonify(success = True, id = app.id, developer_id = app.developer_id)
+        except Exception as e:
+            print(e)
+            return jsonify(error = "Failed to update developer ID. Does new ID exist?", e = "body.invalid"), 400
+    else:
+        return jsonify(error = "Invalid POST body. Provide one or more fields to update", e = "body.invalid"), 400
+
+    
 @devportal_api.route('/wizard/app/<appID>', methods=['DELETE'])
 def wizard_delete_app(appID):
     result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
@@ -568,6 +621,7 @@ def wizard_get_s3_assets(appID):
     pbws = list(dict.fromkeys(pbws))
 
     return jsonify(images = images, pbws = pbws)
+
 
 def init_app(app, url_prefix='/api/v2'):
     global parent_app
