@@ -30,7 +30,7 @@ def jsonify_locker_app(entry):
         'links': {
             'remove': url_for('.app_locker', app_uuid=app.app_uuid, _external=True),
             'href': url_for('.app_locker', app_uuid=app.app_uuid, _external=True),
-            'share': f"{config['APPSTORE_ROOT']}/en_US/applications/{app.id}",
+            'share': f"{config['APPSTORE_ROOT']}/applications/{app.id}",
         },
         'developer': {
             'id': app.developer.id,

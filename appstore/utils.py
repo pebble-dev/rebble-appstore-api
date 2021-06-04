@@ -109,7 +109,7 @@ def jsonify_app(app: App, target_hw: str) -> dict:
         'links': {
             'add_heart': url_for('legacy_api.add_heart', app_id=app.id, _external=True),
             'remove_heart': url_for('legacy_api.remove_heart', app_id=app.id, _external=True),
-            'share': f"{config['APPSTORE_ROOT']}/en_US/application/{app.id}",
+            'share': f"{config['APPSTORE_ROOT']}/application/{app.id}",
             'add': 'https://a',
             'remove': 'https://b',
             'add_flag': 'https://c',
