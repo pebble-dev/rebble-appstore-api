@@ -72,7 +72,7 @@ def _jsonify_common(app: App, target_hw: str) -> dict:
         'id': app.id,
         'screenshot_hardware': assets.platform,
         'screenshot_images': [{
-            'x'.join(str(y) for y in plat_dimensions[target_hw]): generate_image_url(x, *plat_dimensions[target_hw], True)
+            'x'.join(str(y) for y in plat_dimensions[assets.platform]): generate_image_url(x, *plat_dimensions[assets.platform], True)
         } for x in assets.screenshots],
         'source': app.source,
         'title': app.title,
