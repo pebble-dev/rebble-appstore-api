@@ -91,7 +91,7 @@ def _jsonify_common(app: App, target_hw: str) -> dict:
         'id': app.id,
         'screenshot_hardware': assets.platform,
         'screenshot_images': [{
-            'x'.join(str(y) for y in plat_dimensions[target_hw]): generate_image_url(x, *plat_dimensions[target_hw], True)
+            'x'.join(str(y) for y in plat_dimensions[assets.platform]): generate_image_url(x, *plat_dimensions[assets.platform], True)
         } for x in assets.screenshots],
         'source': app.source,
         'title': app.title,
@@ -128,7 +128,7 @@ def jsonify_app(app: App, target_hw: str) -> dict:
         'links': {
             'add_heart': url_for('legacy_api.add_heart', app_id=app.id, _external=True),
             'remove_heart': url_for('legacy_api.remove_heart', app_id=app.id, _external=True),
-            'share': f"{config['APPSTORE_ROOT']}/en_US/application/{app.id}",
+            'share': f"{config['APPSTORE_ROOT']}/application/{app.id}",
             'add': 'https://a',
             'remove': 'https://b',
             'add_flag': 'https://c',
