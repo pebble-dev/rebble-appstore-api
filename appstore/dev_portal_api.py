@@ -52,12 +52,7 @@ def my_apps():
     developer_id = me['id']
     # Get apps
     my_apps = [x for x in App.query.filter_by(developer_id=developer_id)]
-    my_appdata = []
-    for a in my_apps:
-        my_appdata.append({
-            "id": a.id,
-            "title": a.title
-        })
+    my_appdata = [{"id": a.id, "title": a.title} for a in my_apps]
 
     # Get developer name
     developer = Developer.query.filter_by(id=developer_id).one_or_none()
@@ -77,7 +72,7 @@ def my_apps():
             'authName': me["name"],
             'applications': [],
             'needsSetup': True,
-            'w': me["is_wizard"]
+            'w': me["is_wizard"],
         })
     else:
         return jsonify({
@@ -88,7 +83,7 @@ def my_apps():
                 'applications': my_appdata,
                 'name': developer.name,
                 'needsSetup': False,
-                'w': me["is_wizard"]
+                'w': me["is_wizard"],
         })
 
 @legacy_api.route('/users/me/developer', methods=['POST'])

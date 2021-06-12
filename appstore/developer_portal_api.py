@@ -1,7 +1,6 @@
 import json
 import traceback
 import datetime
-# import tempfile
 
 from algoliasearch import algoliasearch
 from flask import Blueprint, jsonify, abort, request
@@ -55,12 +54,12 @@ def create_developer():
             abort(401)
         me = result.json()
 
-        if not "name" in req:
+        if "name" not in req:
             return jsonify(error = "Missing required field: name", e = "missing.field.name"), 400
         
         try:
             dev = Developer.query.filter_by(id=me['id']).one()
-            return jsonify(success = True, message = "User is already onboard")
+            return jsonify(success = True, message = "User is already on board")
         except NoResultFound:
             dev = Developer(id=me['id'], name=req['name'])
             db.session.add(dev)
@@ -70,12 +69,11 @@ def create_developer():
 
 @devportal_api.route('/submit', methods=['POST'])
 def submit_new_app():
-    try:
-
         # Validate all fields
-        requestOK = validate_new_app_fields(request)
+        appOK, appError, appErrorCode  = validate_new_app_fields(request)
 
-        if requestOK[0] == True:
+
+        if appOK == True:
 
             params = dict(request.form)
 
@@ -121,7 +119,10 @@ def submit_new_app():
             developer = Developer.query.filter(Developer.id == developer_id).one_or_none()
 
             if developer is None:
-                return jsonify(error = "You do not have an active developer account.", e = "account.invalid", message = "Please visit dev-portal.rebble.io to activate your developer account"), 409
+                return jsonify(
+                    error = "You do not have an active developer account.",
+                    e = "account.invalid",
+                    message = "Please visit dev-portal.rebble.io to activate your developer account"), 409
 
             # Upload banner if present
             if "banner" in request.files:
@@ -144,13 +145,13 @@ def submit_new_app():
 
             # Add blanks to optional values
             for x in ["source","website"]:
-                if not x in params:
+                if x not in params:
                     params[x] = ""
 
             app_obj = App(
                 id = id_generator.generate(),
                 app_uuid = appinfo['uuid'],
-                asset_collections = { x: AssetCollection(
+                asset_collections = {x: AssetCollection(
                     platform=x,
                     description=params['description'],
                     screenshots=[upload_asset(s, s.content_type) for s in screenshots[x]],
@@ -178,7 +179,7 @@ def submit_new_app():
                                        release_notes = params['release_notes'],
                                        published_date = datetime.datetime.utcnow(),
                                        version = appinfo['versionLabel'],
-                                       compatibility = appinfo.get('targetPlatforms', [ 'aplite', 'basalt', 'diorite', 'emery' ]))
+                                       compatibility = appinfo.get('targetPlatforms', ['aplite', 'basalt', 'diorite', 'emery']))
             print(f"Created release {release.id}")
             upload_pbw(release, request.files['pbw'])
             db.session.commit()
@@ -191,13 +192,7 @@ def submit_new_app():
             return jsonify(success = True, id = app_obj.id)
 
         else:
-            return jsonify(error = requestOK[1], e = requestOK[2]), 400
-
-    except Exception as e:
-        traceback.print_exc()
-        print("Oh no")
-        abort(500)
-        return
+            return jsonify(error = appError, e = appErrorCode), 400
 
 @devportal_api.route('/app/<appID>', methods=['POST'])
 def update_app_fields(appID):
@@ -330,9 +325,9 @@ def submit_new_release(appID):
         except Exception as e:
             return jsonify(error = f"Your pbw file is invalid or corrupted", e = "invalid.pbw"), 400
 
-        appinfo_valid = is_valid_appinfo(appinfo)
-        if not appinfo_valid[0]:
-            return jsonify(error = f"The appinfo.json in your pbw file has the following error: {appinfo_valid[1]}", e = "invalid.appinfocontent"), 400
+        appinfo_valid, appinfo_valid_reason = is_valid_appinfo(appinfo)
+        if not appinfo_valid:
+            return jsonify(error = f"The appinfo.json in your pbw file has the following error: {appinfo_valid_reason}", e = "invalid.appinfocontent"), 400
 
         uuid = appinfo['uuid']
         version = appinfo['versionLabel']
