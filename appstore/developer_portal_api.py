@@ -21,16 +21,16 @@ devportal_api = Blueprint('devportal_api', __name__)
 CORS(devportal_api)
 
 category_map = {
-                'Notifications': '5261a8fb3b773043d5000001',
-                'Health & Fitness': '5261a8fb3b773043d5000004',
-                'Remotes': '5261a8fb3b773043d5000008',
-                'Daily': '5261a8fb3b773043d500000c',
-                'Tools & Utilities': '5261a8fb3b773043d500000f',
-                'Games': '5261a8fb3b773043d5000012',
-                'Index': '527509e36526cda2d4000019',
-                'Faces': '528d3ef2dc7b5f580700000a',
-                'GetSomeApps': '52ccee3151a80d28e100003e',
-            }
+    'Notifications': '5261a8fb3b773043d5000001',
+    'Health & Fitness': '5261a8fb3b773043d5000004',
+    'Remotes': '5261a8fb3b773043d5000008',
+    'Daily': '5261a8fb3b773043d500000c',
+    'Tools & Utilities': '5261a8fb3b773043d500000f',
+    'Games': '5261a8fb3b773043d5000012',
+    'Index': '527509e36526cda2d4000019',
+    'Faces': '528d3ef2dc7b5f580700000a',
+    'GetSomeApps': '52ccee3151a80d28e100003e',
+}
 
 if config['ALGOLIA_ADMIN_API_KEY']:
     algolia_client = algoliasearch.Client(config['ALGOLIA_APP_ID'], config['ALGOLIA_ADMIN_API_KEY'])
