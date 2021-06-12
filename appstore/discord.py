@@ -21,7 +21,7 @@ def announce_release(App, Release):
         request_data = {
             "embeds": [{
                 "title": f"{str(App.type).capitalize()} Update Alert {random_party_emoji()}",
-                "url": f"{config['APPSTORE_ROOT']}/en_US/application/{App.id}",
+                "url": f"{config['APPSTORE_ROOT']}/application/{App.id}",
                 "thumbnail": {
                     "url": f"{config['IMAGE_ROOT']}/80x80/filters:upscale()/{App.icon_large}",
                     "height": 80,
@@ -45,21 +45,17 @@ def announce_release(App, Release):
 
 def announce_new_app(App):
     try:
-
-        request_fields = [
-                    {
-                        "name": "Name",
-                        "value": App.title
-                    },
-                    {
-                        "name": "Description",
-                        "value": get_app_description(App)
-                    },
-                    {
-                        "name": "Author",
-                        "value": App.developer.name
-                    }
-        ]
+        request_fields = [{
+                 "name": "Name",
+                 "value": App.title
+             }, {
+                 "name": "Description",
+                 "value": get_app_description(App)
+             }, {
+                 "name": "Author",
+                 "value": App.developer.name
+             }
+         ]
 
         # Discord gets upset if we send fields with blank values, so we have to add dynamically
 
@@ -69,13 +65,13 @@ def announce_new_app(App):
                         "value": App.category.name
                     })
 
-        if App.source is not None and len(App.source) > 1:
+        if App.source:
             request_fields.append({
                         "name": "Source URL",
                         "value": App.source
                     })
 
-        if App.website is not None and len(App.website) > 1:
+        if App.website:
             request_fields.append({
                         "name": "Website",
                         "value": App.website
@@ -84,7 +80,7 @@ def announce_new_app(App):
         request_data = {
             "embeds": [{
                 "title": f"New {str(App.type).capitalize()} Alert {random_party_emoji()}",
-                "url": f"{config['APPSTORE_ROOT']}/en_US/application/{App.id}",
+                "url": f"{config['APPSTORE_ROOT']}/application/{App.id}",
                 "description": f"There's a new {App.type} on the appstore!",
                 "thumbnail": {
                     "url": f"{config['IMAGE_ROOT']}/80x80/filters:upscale()/{App.icon_large}",

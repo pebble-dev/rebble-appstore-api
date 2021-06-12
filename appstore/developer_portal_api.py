@@ -224,10 +224,10 @@ def update_app_fields(appID):
 
 
         # Check app exists
-        app = App.query.filter(App.id == appID)
-        if app.count() < 1:
-            return jsonify(error = "Unknown app", e = "app.notfound"), 400      
-        app = app.one()
+        try:
+            app = App.query.filter(App.id == appID).one()
+        except NoResultFound:
+            return jsonify(error="Unknown app", e="app.notfound"), 400
 
         # Check we own the app
         result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
@@ -290,25 +290,25 @@ def redirect_to_app_api(appID):
 
 @devportal_api.route('/app/<appID>/release', methods=['POST'])
 def submit_new_release(appID):
-    app = App.query.filter(App.id == appID)
-    if app.count() < 1:
+    try:
+        app = App.query.filter(App.id == appID).one()
+    except NoResultFound:
         return jsonify(error = "Unknown app", e = "app.notfound"), 400
-    app = app.one()
 
     # Check we own the app
     result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
     if result.status_code != 200:
         abort(401)
     me = result.json()
-    if not me['id'] == app.developer_id:
+    if me['id'] != app.developer_id:
         return jsonify(error = "You do not have permission to modify that app", e = "permission.denied"), 403
 
     data = dict(request.form)
 
-    if not "pbw" in request.files:
+    if "pbw" not in request.files:
         return jsonify(error = "Missing file: pbw", e = "pbw.missing"), 400
 
-    if not "release_notes" in data:
+    if "release_notes" not in data:
         return jsonify(error = "Missing field: release_notes", e = "release_notes.missing"), 400
 
     try:   
@@ -332,10 +332,10 @@ def submit_new_release(appID):
         uuid = appinfo['uuid']
         version = appinfo['versionLabel']
         
-        if not uuid == app.app_uuid:
+        if uuid != app.app_uuid:
             return jsonify(error = "The UUID in appinfo.json does not match the app you are trying to update", e = "uuid.mismatch"), 400
 
-        release_old = Release.query.filter_by(app = app).order_by(Release.published_date.desc()).limit(1).one()
+        release_old = Release.query.filter_by(app = app).order_by(Release.published_date.desc()).first()
 
         if version == release_old.version:
             return jsonify(error = f"The version ({version}) is already on the appstore", e = "version.exists", message = "The app version in appinfo.json is not greater than the latest release on the store. Please increment versionLabel in your appinfo.json and try again."), 400
@@ -457,7 +457,7 @@ def delete_screenshot(appID, platform, screenshotID):
     if asset_collection is None:
         return jsonify(error = "Screenshot not found", e = "screenshot.invalid"), 404
 
-    if not screenshotID in asset_collection.screenshots:
+    if screenshotID not in asset_collection.screenshots:
         return jsonify(error = "Screenshot not found", e = "screenshot.invalid"), 404
 
     if len(asset_collection.screenshots) < 2:
@@ -542,7 +542,6 @@ def wizard_update_app(appID):
     if "developer_id" in req:
             app.developer_id = req["developer_id"]
             changeOccured = True
-            # return jsonify(error = "Failed to update developer ID. New ID does not exist", e = "newid.invalid"), 400
 
 
     
@@ -595,21 +594,17 @@ def wizard_get_s3_assets(appID):
     images = []
     pbws = []
 
-    if len(app.icon_large) > 0:
+    if app.icon_large:
         images.append(app.icon_large) 
-    if len(app.icon_small) > 0:
+    if app.icon_small:
         images.append(app.icon_small)
 
     assets = AssetCollection.query.filter(AssetCollection.app_id == appID)
     for a in assets:
-        if len(a.screenshots) > 0:
-            images = images + a.screenshots
-        if len(a.headers) > 0:
-            images = images + a.headers
+        images.extend(a.screenshots)
+        images.extend(a.headers)
 
-    releases = Release.query.filter(Release.app_id == appID)
-    for r in releases:
-        pbws.append(r.id)
+    pbws.extend(Release.query.filter(Release.app_id == appID))
 
     # Remove duplicates
     images = list(dict.fromkeys(images))

@@ -28,7 +28,7 @@ if not session:
 def upload_pbw(release, file):
     filename = f"{config['S3_PATH']}{release.id}.pbw"
 
-    if type(file) is str:
+    isinstance(file, str):
         print(f"uploading file {file} to {config['S3_BUCKET']}:{filename}")
         s3 = session.client('s3', endpoint_url=s3_endpoint)
         s3.upload_file(file, config['S3_BUCKET'], filename)
@@ -41,7 +41,7 @@ def upload_asset(file, mime_type = None):
     id = id_generator.generate()
     filename = f"{config['S3_ASSET_PATH']}{id}"
 
-    if type(file) is str:
+    isinstance(file, str):
         print(f"uploading file {file} to {config['S3_ASSET_BUCKET']}:{filename}")
         if mime_type is None:
             if file.endswith(".gif"):

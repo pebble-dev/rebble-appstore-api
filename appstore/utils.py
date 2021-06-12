@@ -13,9 +13,6 @@ import beeline
 from .settings import config
 from appstore.models import App, AssetCollection, CompanionApp
 
-# from werkzeug.datastructures import ImmutableMultiDict
-
-
 
 parent_app = None
 
@@ -41,18 +38,17 @@ plat_dimensions = {
 }
 
 valid_platforms = [
-        "aplite",
-        "basalt",
-        "chalk",
-        "diorite",
-        "emery"
+    "aplite",
+    "basalt",
+    "chalk",
+    "diorite",
+    "emery"
 ]
 
 permitted_image_types = [
     "png",
     "jpeg",
     "gif",
-    "bmp"
 ]
 
 
@@ -286,10 +282,10 @@ def is_valid_category(category):
         "Games",
         "Index",
         "Faces",
-        "GetSomeApps"
+        "GetSomeApps",
     ]
 
-    return (category in valid_categories)
+    return category in valid_categories
 
 def is_valid_platform(platform):
     return platform in valid_platforms
@@ -347,10 +343,10 @@ def validate_new_app_fields(request):
     ]
     
     # First we check we have all the always required fields
-    if not all (k in data for k in required_fields):
+    if not all(k in data for k in required_fields):
         return False, "Missing a required field", "field.missing"
 
-    if not data["type"] in permitted_sub_types:
+    if data["type"] not in permitted_sub_types:
         return False, "Invalid submission type. Expected watchface or watchapp", "subtype.illegal"
 
     # If we have an app, check app-specific fields
@@ -390,19 +386,20 @@ def validate_new_app_fields(request):
         return False, "No screenshots provided", "screenshots.noneprovided"
 
     # Check we have a pbw
-    if not "pbw" in request.files:
+    if "pbw" not in request.files:
         return False, "Missing file: pbw", "pbw.missing"
 
     # If you are here, you are good to go
 
-    return True, ""
+    return True, "", ""
 
 def clone_asset_collection_without_images(appObject, platform):
-    # Find an existing asset collection for AppID and clone the header and desc. Used for uploading new screenshots to a previously nonexisted asset collection
+    # Find an existing asset collection for AppID and clone the header and desc.
+    # Used for uploading new screenshots to a previously nonexisted asset collection.
     # We take an app object as calling func. will have already done a lookup
     for p in valid_platforms:
         og_asset_collection = AssetCollection.query.filter(AssetCollection.app_id == appObject.id, AssetCollection.platform == p).one_or_none()
-        if not og_asset_collection is None:
+        if og_asset_collection is not None:
             break
 
     clone_asset_collection = AssetCollection(

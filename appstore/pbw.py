@@ -46,7 +46,7 @@ class PBW(object):
     def __init__(self, pbw, platform):
         self.platform = platform
         # pbw can be file path or file object. Determine which
-        if type(pbw) is str:
+        if isinstance(pbw, str):
             bundle = os.path.abspath(bundle_path)
             if not os.path.exists(bundle):
                 raise Exception("Bundle does not exist: " + bundle_path)
