@@ -211,7 +211,7 @@ def update_app_fields(appID):
             "category": str,
             "website": str,
             "source": str,
-            "visible": str
+            "visible": bool
         }
 
         # Check all passed fields are allowed
@@ -252,21 +252,8 @@ def update_app_fields(appID):
             return jsonify(error = "Title must be less than 45 characters", e = "invalid.field.title"), 400
             
         # Update the app
-        # TODO: Find a way to do this in a loop app[x] doesn't work
-        if "title" in req:
-            app.title = req["title"]
-        if "category" in req:
-            app.category = category_map[req["category"]]
-        if "website" in req:
-            app.website = req["website"]
-        if "source" in req:
-            app.source = req["source"]
-        if "visible" in req:
-            # We've already check it's 'true' or 'false'
-            if req["visible"].lower() == "true":
-                app.visible = True
-            else:
-                app.visible = False
+        for x in req:
+            setattr(app, x, req[x])
 
         # Updating description requires iterating through asset collection
         if "description" in req:
