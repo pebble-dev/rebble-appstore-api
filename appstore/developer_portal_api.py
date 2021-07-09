@@ -98,9 +98,9 @@ def submit_new_app():
                 return jsonify(error = f"Your pbw file is invalid or corrupt", e = "invalid.pbw"), 400
 
 
-            appinfo_valid = is_valid_appinfo(appinfo)
-            if not appinfo_valid[0]:
-                return jsonify(error = f"The appinfo.json in your pbw file has the following error: {appinfo_valid[1]}", e = "invalid.appinfocontent"), 400
+            appinfo_valid, appinfo_validation_error = is_valid_appinfo(appinfo)
+            if not appinfo_valid:
+                return jsonify(error = f"The appinfo.json in your pbw file has the following error: {appinfo_validation_error}", e = "invalid.appinfocontent"), 400
             
             # Check app doesn't already exist
             try:
