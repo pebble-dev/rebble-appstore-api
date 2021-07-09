@@ -7,6 +7,7 @@ from flask import Blueprint, jsonify, abort, request
 from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
+from werkzeug.exceptions import BadRequest
 
 from .utils import authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file, generate_image_url
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
@@ -41,9 +42,8 @@ else:
 @devportal_api.route('/onboard', methods=['POST'])
 def create_developer():
         try:
-            req = request.json
-        except Exception as e:
-            print(e)
+           req = request.json
+        except BadRequest as e:
             return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
 
         if req is None:
@@ -196,11 +196,7 @@ def submit_new_app():
 
 @devportal_api.route('/app/<appID>', methods=['POST'])
 def update_app_fields(appID):
-        try:
-            req = request.json
-        except Exception as e:
-            print(e)
-            return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
+        req = request.json
 
         if req is None:
             return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
@@ -216,7 +212,7 @@ def update_app_fields(appID):
 
         # Check all passed fields are allowed
         for x in req:
-            if not x in allowed_fields_type_map:
+            if x not in allowed_fields_type_map:
                 return jsonify(error = f"Illegal field: {x}", e = "illegal.field"), 400
 
             if not type(x) == allowed_fields_type_map[x]:
@@ -266,14 +262,6 @@ def update_app_fields(appID):
 
         return jsonify(success = True, id = app.id)
 
-@devportal_api.route('/app/<appID>', methods=['GET'])
-def redirect_to_app_api(appID):
-    # Get requests on new API should be sent back to existing API
-    response = jsonify(message = "Redirecting to correct API endpoint")
-    response.status_code = 302
-    response.headers['location'] = '/api/v1/apps/id/' + appID
-    response.autocorrect_location_header = False
-    return response
 
 @devportal_api.route('/app/<appID>/release', methods=['POST'])
 def submit_new_release(appID):
@@ -476,10 +464,10 @@ def wizard_rename_developer(developerID):
         return jsonify(error = "Invalid POST body. Expected JSON and 'Content-Type: application/json'", e = "request.invalid"), 400
 
     for f in req:
-        if not f in permitted_fields:
+        if f not in permitted_fields:
             return jsonify(error = f"Illegal field: {f}", e = "illegal.field"), 400
 
-    if not "name" in req:
+    if "name" not in req:
         return jsonify(error = f"Missing required field: name", e = "missing.field.name"), 400
 
     
@@ -516,7 +504,7 @@ def wizard_update_app(appID):
 
 
     for x in req:
-        if not x in allowed_fields:
+        if x not in allowed_fields:
             return jsonify(error = f"Illegal field: {x}", e = "illegal.field"), 400
 
     app = App.query.filter(App.id == appID).one_or_none()
@@ -591,7 +579,9 @@ def wizard_get_s3_assets(appID):
         images.extend(a.screenshots)
         images.extend(a.headers)
 
-    pbws.extend(Release.query.filter(Release.app_id == appID))
+    pbws.extend(r.id for r in Release.query.filter(Release.app_id == appID))
+
+    print(pbws)
 
     # Remove duplicates
     images = list(dict.fromkeys(images))
