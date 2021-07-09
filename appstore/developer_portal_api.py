@@ -10,6 +10,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from werkzeug.exceptions import BadRequest
 from sqlalchemy.exc import DataError
+from zipfile import BadZipFile
 
 from .utils import authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file, generate_image_url
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
@@ -89,13 +90,13 @@ def submit_new_app():
             try:
                 pbw_file = request.files['pbw'].read()
                 pbw = PBW(pbw_file, 'aplite')
-            except Exception as e:
+            except BadZipFile as e:
                 return jsonify(error = f"Your pbw file is corrupt or invalid", e = "invalid.pbw"), 400
 
             try:
                 with pbw.zip.open('appinfo.json') as f:
                     appinfo = json.load(f)
-            except Exception as e:
+            except KeyError as e:
                 return jsonify(error = f"Your pbw file is invalid or corrupt", e = "invalid.pbw"), 400
 
 
@@ -290,13 +291,13 @@ def submit_new_release(appID):
 
         try:
             pbw = PBW(pbw_file, 'aplite')
-        except Exception as e:
+        except BadZipFile as e:
             return jsonify(error = f"Your pbw file is invalid or corrupted", e = "invalid.pbw"), 400
 
         try:
             with pbw.zip.open('appinfo.json') as f:
                 appinfo = json.load(f)
-        except Exception as e:
+        except KeyError as e:
             return jsonify(error = f"Your pbw file is invalid or corrupted", e = "invalid.pbw"), 400
 
         appinfo_valid, appinfo_valid_reason = is_valid_appinfo(appinfo)
