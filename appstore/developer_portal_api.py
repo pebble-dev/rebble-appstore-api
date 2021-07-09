@@ -145,10 +145,10 @@ def submit_new_app():
                     del clearedScreenshots[platform]
             screenshots = clearedScreenshots
 
-            # Add blanks to optional values
-            for x in ["source","website"]:
-                if x not in params:
-                    params[x] = ""
+            # # Add blanks to optional values
+            # for x in ["source","website"]:
+            #     if x not in params:
+            #         params[x] = ""
 
             app_obj = App(
                 id = id_generator.generate(),
@@ -168,11 +168,11 @@ def submit_new_app():
                 releases = [],
                 icon_large = upload_asset(request.files['large_icon'], request.files["large_icon"].content_type),
                 icon_small = upload_asset(request.files['small_icon'], request.files["small_icon"].content_type) if 'small_icon' in params else '',
-                source = params['source'],
+                source = params['source'] if 'source' in params else "",
                 title = params['title'],
                 type = params['type'],
                 timeline_enabled = False,
-                website = params['website']
+                website = params['website'] if 'source' in params else "",
             )
             db.session.add(app_obj)
             print(f"Created app {app_obj.id}")
@@ -214,9 +214,6 @@ def update_app_fields(appID):
 
         # Check all passed fields are allowed
         for x in req:
-            if x not in allowed_fields_type_map:
-                return jsonify(error = f"Illegal field: {x}", e = "illegal.field"), 400
-
             if not type(x) == allowed_fields_type_map[x]:
                 return jsonify(error = f"Invalid value for field '{x}'", e = f"invalid.field.{x}"), 400
 
