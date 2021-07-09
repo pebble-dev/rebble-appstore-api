@@ -284,51 +284,45 @@ def submit_new_release(appID):
     if "release_notes" not in data:
         return jsonify(error = "Missing field: release_notes", e = "release_notes.missing"), 400
 
-    try:   
-        pbw_file = request.files['pbw'].read()
+    pbw_file = request.files['pbw'].read()
 
-        try:
-            pbw = PBW(pbw_file, 'aplite')
-            with pbw.zip.open('appinfo.json') as f:
-                appinfo = json.load(f)
-        except BadZipFile as e:
-            return jsonify(error = f"Your pbw file is invalid or corrupted", e = "invalid.pbw"), 400
-        except KeyError as e:
-            return jsonify(error = f"Your pbw file is invalid or corrupted", e = "invalid.pbw"), 400
+    try:
+        pbw = PBW(pbw_file, 'aplite')
+        with pbw.zip.open('appinfo.json') as f:
+            appinfo = json.load(f)
+    except BadZipFile as e:
+        return jsonify(error = f"Your pbw file is invalid or corrupted", e = "invalid.pbw"), 400
+    except KeyError as e:
+        return jsonify(error = f"Your pbw file is invalid or corrupted", e = "invalid.pbw"), 400
 
-        appinfo_valid, appinfo_valid_reason = is_valid_appinfo(appinfo)
-        if not appinfo_valid:
-            return jsonify(error = f"The appinfo.json in your pbw file has the following error: {appinfo_valid_reason}", e = "invalid.appinfocontent"), 400
+    appinfo_valid, appinfo_valid_reason = is_valid_appinfo(appinfo)
+    if not appinfo_valid:
+        return jsonify(error = f"The appinfo.json in your pbw file has the following error: {appinfo_valid_reason}", e = "invalid.appinfocontent"), 400
 
-        uuid = appinfo['uuid']
-        version = appinfo['versionLabel']
+    uuid = appinfo['uuid']
+    version = appinfo['versionLabel']
         
-        if uuid != app.app_uuid:
-            return jsonify(error = "The UUID in appinfo.json does not match the app you are trying to update", e = "uuid.mismatch"), 400
+    if uuid != app.app_uuid:
+        return jsonify(error = "The UUID in appinfo.json does not match the app you are trying to update", e = "uuid.mismatch"), 400
 
-        release_old = Release.query.filter_by(app = app).order_by(Release.published_date.desc()).first()
+    release_old = Release.query.filter_by(app = app).order_by(Release.published_date.desc()).first()
 
-        if version == release_old.version:
-            return jsonify(error = f"The version ({version}) is already on the appstore", e = "version.exists", message = "The app version in appinfo.json is not greater than the latest release on the store. Please increment versionLabel in your appinfo.json and try again."), 400
+    if version == release_old.version:
+        return jsonify(error = f"The version ({version}) is already on the appstore", e = "version.exists", message = "The app version in appinfo.json is not greater than the latest release on the store. Please increment versionLabel in your appinfo.json and try again."), 400
 
-        release_new = release_from_pbw(app, pbw_file,
-                                       release_notes = data["release_notes"],
-                                       published_date = datetime.datetime.utcnow(),
-                                       version = version,
-                                       compatibility = release_old.compatibility)
+    release_new = release_from_pbw(app, pbw_file,
+                                   release_notes = data["release_notes"],
+                                   published_date = datetime.datetime.utcnow(),
+                                   version = version,
+                                   compatibility = release_old.compatibility)
 
-        upload_pbw(release_new, request.files['pbw'])
-        db.session.commit()
+    upload_pbw(release_new, request.files['pbw'])
+    db.session.commit()
 
-        announce_release(app, release_new)
+    announce_release(app, release_new)
 
-        return jsonify(success = True)
+    return jsonify(success = True)
         
-    except Exception as e:
-        traceback.print_exc()
-        print("Oh no")
-        abort(500)
-
 # Screenshots 
 @devportal_api.route('/app/<appID>/screenshots')
 def missing_platform(appID):
