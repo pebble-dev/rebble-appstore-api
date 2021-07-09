@@ -7,7 +7,9 @@ from flask import Blueprint, jsonify, abort, request
 from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
+
 from werkzeug.exceptions import BadRequest
+from sqlalchemy.exc import DataError
 
 from .utils import authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file, generate_image_url
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
@@ -105,7 +107,7 @@ def submit_new_app():
             try:
                 if App.query.filter(App.app_uuid == appinfo['uuid']).count() > 0:
                     return jsonify(error = "An app already exists with that UUID", e = "app.exists"), 400
-            except Exception as e:
+            except DataError as e:
                 return jsonify(error = "The UUID provided in appinfo.json is invalid", e = "invalid.uuid"), 400
 
             # Get developer ID from auth (This is also where we check the user is authenticated)
