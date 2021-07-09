@@ -90,12 +90,10 @@ def submit_new_app():
             try:
                 pbw_file = request.files['pbw'].read()
                 pbw = PBW(pbw_file, 'aplite')
-            except BadZipFile as e:
-                return jsonify(error = f"Your pbw file is corrupt or invalid", e = "invalid.pbw"), 400
-
-            try:
                 with pbw.zip.open('appinfo.json') as f:
                     appinfo = json.load(f)
+            except BadZipFile as e:
+                return jsonify(error = f"Your pbw file is corrupt or invalid", e = "invalid.pbw"), 400
             except KeyError as e:
                 return jsonify(error = f"Your pbw file is invalid or corrupt", e = "invalid.pbw"), 400
 
@@ -291,12 +289,10 @@ def submit_new_release(appID):
 
         try:
             pbw = PBW(pbw_file, 'aplite')
-        except BadZipFile as e:
-            return jsonify(error = f"Your pbw file is invalid or corrupted", e = "invalid.pbw"), 400
-
-        try:
             with pbw.zip.open('appinfo.json') as f:
                 appinfo = json.load(f)
+        except BadZipFile as e:
+            return jsonify(error = f"Your pbw file is invalid or corrupted", e = "invalid.pbw"), 400
         except KeyError as e:
             return jsonify(error = f"Your pbw file is invalid or corrupted", e = "invalid.pbw"), 400
 
