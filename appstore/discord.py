@@ -3,7 +3,7 @@ import requests
 import random
 
 from .settings import config
-from .utils import get_app_description
+from .utils import get_app_description, generate_image_url
 from appstore.models import App
 
 party_time_emoji = ["🎉","🥳","👏","❤️","🥰","🎊"]
@@ -11,23 +11,23 @@ party_time_emoji = ["🎉","🥳","👏","❤️","🥰","🎊"]
 def random_party_emoji():
     return random.choice(party_time_emoji)
 
-def announce_release(App, Release):
+def announce_release(app, release):
     try:
 
-        release_notes = Release.release_notes
+        release_notes = release.release_notes
         if len(release_notes) < 1:
             release_notes = "N/A"
 
         request_data = {
             "embeds": [{
-                "title": f"{str(App.type).capitalize()} Update Alert {random_party_emoji()}",
-                "url": f"{config['APPSTORE_ROOT']}/application/{App.id}",
+                "title": f"{str(app.type).capitalize()} Update Alert {random_party_emoji()}",
+                "url": f"{config['APPSTORE_ROOT']}/application/{app.id}",
                 "thumbnail": {
-                    "url": f"{config['IMAGE_ROOT']}/80x80/filters:upscale()/{App.icon_large}",
+                    "url": generate_image_url(app.icon_large, 80, 80),
                     "height": 80,
                     "width": 80
                 },
-                "description": f"{App.developer.name} just updated their {App.type} *{App.title}* to version {Release.version}!",
+                "description": f"{app.developer.name} just updated their {app.type} *{app.title}* to version {release.version}!",
                 "fields": [
                     {
                         "name": "Release Notes",
@@ -43,66 +43,57 @@ def announce_release(App, Release):
         # Let's not make a fuss
         return
 
-def announce_new_app(App):
-    try:
-        request_fields = [{
-                 "name": "Name",
-                 "value": App.title
-             }, {
-                 "name": "Description",
-                 "value": get_app_description(App)
-             }, {
-                 "name": "Author",
-                 "value": App.developer.name
-             }
-         ]
+def announce_new_app(app):
+    request_fields = [{
+             "name": "Name",
+             "value": app.title
+         }, {
+             "name": "Description",
+             "value": get_app_description(app)
+         }, {
+             "name": "Author",
+             "value": app.developer.name
+         }
+     ]
 
-        # Discord gets upset if we send fields with blank values, so we have to add dynamically
+    # Discord gets upset if we send fields with blank values, so we have to add dynamically
 
-        if App.type == "watchapp":
-            request_fields.append({
-                        "name": "Category",
-                        "value": App.category.name
-                    })
+    if app.type == "watchapp":
+        request_fields.append({
+                    "name": "Category",
+                    "value": app.category.name
+                })
 
-        if App.source:
-            request_fields.append({
-                        "name": "Source URL",
-                        "value": App.source
-                    })
+    if app.source:
+        request_fields.append({
+                    "name": "Source URL",
+                    "value": app.source
+                })
 
-        if App.website:
-            request_fields.append({
-                        "name": "Website",
-                        "value": App.website
-                    })
+    if app.website:
+        request_fields.append({
+                    "name": "Website",
+                    "value": app.website
+                })
 
-        request_data = {
-            "embeds": [{
-                "title": f"New {str(App.type).capitalize()} Alert {random_party_emoji()}",
-                "url": f"{config['APPSTORE_ROOT']}/application/{App.id}",
-                "description": f"There's a new {App.type} on the appstore!",
-                "thumbnail": {
-                    "url": f"{config['IMAGE_ROOT']}/80x80/filters:upscale()/{App.icon_large}",
-                    "height": 80,
-                    "width": 80
-                },
-                "fields": request_fields
-            }]
-        }
+    request_data = {
+        "embeds": [{
+            "title": f"New {str(app.type).capitalize()} Alert {random_party_emoji()}",
+            "url": f"{config['APPSTORE_ROOT']}/application/{app.id}",
+            "description": f"There's a new {app.type} on the appstore!",
+            "thumbnail": {
+                "url": generate_image_url(app.icon_large, 80, 80),
+                "height": 80,
+                "width": 80
+            },
+            "fields": request_fields
+        }]
+    }
 
-        send_discord_webhook(request_data)
-
-    except Exception as e:
-        # Let's not make a fuss
-        print(e)
-        return
+    send_discord_webhook(request_data)
 
 
 def send_discord_webhook(request_data):
     if config['DISCORD_HOOK_URL'] is not None:
-        try:
-            headers = {'Content-Type': 'application/json'}
-            requests.post(config['DISCORD_HOOK_URL'], data=json.dumps(request_data), headers=headers)
-        except Exception as e:
-            print(f"Error sending Discord webhook: {e}")
+        headers = {'Content-Type': 'application/json'}
+        requests.post(config['DISCORD_HOOK_URL'], data=json.dumps(request_data), headers=headers)
