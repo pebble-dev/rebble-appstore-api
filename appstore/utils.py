@@ -371,18 +371,17 @@ def validate_new_app_fields(request):
     # We must have at least 1 screenshot in total
     # Here we also validate it's an image file
 
-    atLeastOneScreenshot = False
+    at_least_one_screenshot = False
     for platform in screenshot_platforms:
-        print(platform)
         for x in range(6):
              if f"screenshot-{platform}-{x}" in request.files:
                 imgtype = imghdr.what(request.files[f"screenshot-{platform}-{x}"])
                 if imgtype in permitted_image_types:
-                    atLeastOneScreenshot = True
+                    at_least_one_screenshot = True
                 else:
                     return False, "Illegal image type: " + str(imgtype), "screenshots.illegalvalue"
 
-    if not atLeastOneScreenshot:
+    if not at_least_one_screenshot:
         return False, "No screenshots provided", "screenshots.noneprovided"
 
     # Check we have a pbw
