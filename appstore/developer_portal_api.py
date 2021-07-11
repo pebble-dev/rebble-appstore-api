@@ -399,20 +399,12 @@ def new_app_screenshots(app_id, platform):
 
     return jsonify(success = True, id = new_image_id, platform = platform)
 
-@devportal_api.route('/app/<app_id>/screenshots/<platform>/<screenshotID>', methods=['GET'])
-def get_screenshot(app_id, platform, screenshotID):
-    response = jsonify(message = "Use assets URL for GETting screenshots")
-    response.status_code = 302
-    response.headers['location'] = generate_image_url(screenshotID)
-    response.autocorrect_location_header = False
-    return response
-
 @devportal_api.route('/app/<app_id>/screenshots/<platform>/<screenshotID>', methods=['DELETE'])
 def delete_screenshot(app_id, platform, screenshotID):
-    app = App.query.filter(App.id == app_id)
-    if app.count() < 1:
+    try:
+        app = App.query.filter(App.id == app_id).one()
+    except NoResultFound as e:
         return jsonify(error = "Unknown app", e = "app.notfound"), 400
-    app = app.one()
 
     # Check we own the app
     result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
