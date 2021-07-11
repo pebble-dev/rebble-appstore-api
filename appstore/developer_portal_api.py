@@ -199,8 +199,8 @@ def submit_new_app():
         else:
             return jsonify(error = appError, e = appErrorCode), 400
 
-@devportal_api.route('/app/<appID>', methods=['POST'])
-def update_app_fields(appID):
+@devportal_api.route('/app/<app_id>', methods=['POST'])
+def update_app_fields(app_id):
         req = request.json
 
         if req is None:
@@ -223,7 +223,7 @@ def update_app_fields(appID):
 
         # Check app exists
         try:
-            app = App.query.filter(App.id == appID).one()
+            app = App.query.filter(App.id == app_id).one()
         except NoResultFound:
             return jsonify(error="Unknown app", e="app.notfound"), 400
 
@@ -265,10 +265,10 @@ def update_app_fields(appID):
         return jsonify(success = True, id = app.id)
 
 
-@devportal_api.route('/app/<appID>/release', methods=['POST'])
-def submit_new_release(appID):
+@devportal_api.route('/app/<app_id>/release', methods=['POST'])
+def submit_new_release(app_id):
     try:
-        app = App.query.filter(App.id == appID).one()
+        app = App.query.filter(App.id == app_id).one()
     except NoResultFound:
         return jsonify(error = "Unknown app", e = "app.notfound"), 400
 
@@ -332,18 +332,18 @@ def submit_new_release(appID):
     return jsonify(success = True)
         
 # Screenshots 
-@devportal_api.route('/app/<appID>/screenshots')
-def missing_platform(appID):
+@devportal_api.route('/app/<app_id>/screenshots')
+def missing_platform(app_id):
     return jsonify(error = "Missing platform", e = "platform.missing", message = "Use /app/<id>/screenshots/<platform>"), 400
     
-@devportal_api.route('/app/<appID>/screenshots/<platform>', methods=['GET'])
-def get_app_screenshots(appID, platform):
+@devportal_api.route('/app/<app_id>/screenshots/<platform>', methods=['GET'])
+def get_app_screenshots(app_id, platform):
     # Check app exists
 
     if not is_valid_platform(platform):
         return jsonify(error = f"Invalid platform: {platform}", e = "platform.invalid"), 400  
 
-    app = App.query.filter(App.id == appID)
+    app = App.query.filter(App.id == app_id)
     if app.count() < 1:
         return jsonify(error = "Unknown app", e = "app.notfound"), 400      
     app = app.one()
@@ -355,10 +355,10 @@ def get_app_screenshots(appID, platform):
     else:
         return jsonify(asset_collection.screenshots)
 
-@devportal_api.route('/app/<appID>/screenshots/<platform>', methods=['POST'])
-def new_app_screenshots(appID, platform):
+@devportal_api.route('/app/<app_id>/screenshots/<platform>', methods=['POST'])
+def new_app_screenshots(app_id, platform):
     try:
-        app = App.query.filter(App.id == appID).one()
+        app = App.query.filter(App.id == app_id).one()
     except NoResultFound as e:
         return jsonify(error = "Unknown app", e = "app.notfound"), 400
 
@@ -399,17 +399,17 @@ def new_app_screenshots(appID, platform):
 
     return jsonify(success = True, id = new_image_id, platform = platform)
 
-@devportal_api.route('/app/<appID>/screenshots/<platform>/<screenshotID>', methods=['GET'])
-def get_screenshot(appID, platform, screenshotID):
+@devportal_api.route('/app/<app_id>/screenshots/<platform>/<screenshotID>', methods=['GET'])
+def get_screenshot(app_id, platform, screenshotID):
     response = jsonify(message = "Use assets URL for GETting screenshots")
     response.status_code = 302
     response.headers['location'] = generate_image_url(screenshotID)
     response.autocorrect_location_header = False
     return response
 
-@devportal_api.route('/app/<appID>/screenshots/<platform>/<screenshotID>', methods=['DELETE'])
-def delete_screenshot(appID, platform, screenshotID):
-    app = App.query.filter(App.id == appID)
+@devportal_api.route('/app/<app_id>/screenshots/<platform>/<screenshotID>', methods=['DELETE'])
+def delete_screenshot(app_id, platform, screenshotID):
+    app = App.query.filter(App.id == app_id)
     if app.count() < 1:
         return jsonify(error = "Unknown app", e = "app.notfound"), 400
     app = app.one()
@@ -477,8 +477,8 @@ def wizard_rename_developer(developerID):
 
     return jsonify(success = True, id = developer.id, name = developer.name)
 
-@devportal_api.route('/wizard/app/<appID>', methods=['POST'])
-def wizard_update_app(appID):
+@devportal_api.route('/wizard/app/<app_id>', methods=['POST'])
+def wizard_update_app(app_id):
     # Update app as a wizard. Currently only allowed field is developer_id 
     allowed_fields = [
         "developer_id"
@@ -505,7 +505,7 @@ def wizard_update_app(appID):
         if x not in allowed_fields:
             return jsonify(error = f"Illegal field: {x}", e = "illegal.field"), 400
 
-    app = App.query.filter(App.id == appID).one_or_none()
+    app = App.query.filter(App.id == app_id).one_or_none()
 
     if app is None:
         return jsonify(error = "Unknown app", e = "app.notfound"), 404
@@ -529,8 +529,8 @@ def wizard_update_app(appID):
         return jsonify(error = "Invalid POST body. Provide one or more fields to update", e = "body.invalid"), 400
 
     
-@devportal_api.route('/wizard/app/<appID>', methods=['DELETE'])
-def wizard_delete_app(appID):
+@devportal_api.route('/wizard/app/<app_id>', methods=['DELETE'])
+def wizard_delete_app(app_id):
     result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
     if result.status_code != 200:
         abort(401)
@@ -538,11 +538,11 @@ def wizard_delete_app(appID):
     if not me['is_wizard']:
         return jsonify(error = "You are not a wizard", e = "permission.denied"), 403
     
-    app = App.query.filter(App.id == appID).one_or_none()
+    app = App.query.filter(App.id == app_id).one_or_none()
     if app is None:
         return jsonify(error = "Unknown app", e = "app.notfound"), 404
 
-    App.query.filter(App.id == appID).delete()
+    App.query.filter(App.id == app_id).delete()
 
     db.session.commit()
 
@@ -551,8 +551,8 @@ def wizard_delete_app(appID):
 
     return jsonify(success = True, id = app.id)
 
-@devportal_api.route('/wizard/app/<appID>', methods=['GET'])
-def wizard_get_s3_assets(appID):
+@devportal_api.route('/wizard/app/<app_id>', methods=['GET'])
+def wizard_get_s3_assets(app_id):
     result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
     if result.status_code != 200:
         abort(401)
@@ -560,7 +560,7 @@ def wizard_get_s3_assets(appID):
     if not me['is_wizard']:
         return jsonify(error = "You are not a wizard", e = "permission.denied"), 403
     
-    app = App.query.filter(App.id == appID).one_or_none()
+    app = App.query.filter(App.id == app_id).one_or_none()
     if app is None:
         return jsonify(error = "Unknown app", e = "app.notfound"), 404
 
@@ -572,12 +572,12 @@ def wizard_get_s3_assets(appID):
     if app.icon_small:
         images.append(app.icon_small)
 
-    assets = AssetCollection.query.filter(AssetCollection.app_id == appID)
+    assets = AssetCollection.query.filter(AssetCollection.app_id == app_id)
     for a in assets:
         images.extend(a.screenshots)
         images.extend(a.headers)
 
-    pbws.extend(r.id for r in Release.query.filter(Release.app_id == appID))
+    pbws.extend(r.id for r in Release.query.filter(Release.app_id == app_id))
 
     print(pbws)
 
