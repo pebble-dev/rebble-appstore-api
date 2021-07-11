@@ -5,9 +5,9 @@ import datetime
 from algoliasearch import algoliasearch
 from flask import Blueprint, jsonify, abort, request
 from flask_cors import CORS
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
-
 from werkzeug.exceptions import BadRequest
 from sqlalchemy.exc import DataError
 from zipfile import BadZipFile
@@ -192,6 +192,7 @@ def submit_new_app():
                 announce_new_app(app_obj)
             except Exception:
                 # We don't want to fail just because Discord is being weird
+                print("Discord is being weird")
 
             return jsonify(success = True, id = app_obj.id)
 
@@ -326,6 +327,7 @@ def submit_new_release(appID):
         announce_release(app, release_new)
     except Exception:
         # We don't want to fail just because Discord webhook is being weird
+        print("Discord is being weird")
 
     return jsonify(success = True)
         
@@ -355,10 +357,10 @@ def get_app_screenshots(appID, platform):
 
 @devportal_api.route('/app/<appID>/screenshots/<platform>', methods=['POST'])
 def new_app_screenshots(appID, platform):
-    app = App.query.filter(App.id == appID)
-    if app.count() < 1:
+    try:
+        app = App.query.filter(App.id == appID).one()
+    except NoResultFound as e:
         return jsonify(error = "Unknown app", e = "app.notfound"), 400
-    app = app.one()
 
     # Check we own the app
     result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
