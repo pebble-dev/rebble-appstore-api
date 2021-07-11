@@ -441,8 +441,7 @@ def wizard_rename_developer(developer_id):
 
     try:
         req = request.json
-    except Exception as e:
-        print(e)
+    except BadRequest as e:
         return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
 
     if req is None:
@@ -480,8 +479,7 @@ def wizard_update_app(app_id):
 
     try:
         req = request.json
-    except Exception as e:
-        print(e)
+    except BadRequest as e:
         return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
 
     if req is None:
