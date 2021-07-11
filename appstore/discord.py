@@ -12,10 +12,8 @@ def random_party_emoji():
     return random.choice(party_time_emoji)
 
 def announce_release(app, release):
-    try:
-
         release_notes = release.release_notes
-        if len(release_notes) < 1:
+        if not release_notes:
             release_notes = "N/A"
 
         request_data = {
@@ -38,10 +36,6 @@ def announce_release(app, release):
         }
 
         send_discord_webhook(request_data)
-
-    except Exception as e:
-        # Let's not make a fuss
-        return
 
 def announce_new_app(app):
     request_fields = [{
