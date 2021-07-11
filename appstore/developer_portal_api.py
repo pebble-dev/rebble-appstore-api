@@ -538,7 +538,7 @@ def wizard_get_s3_assets(app_id):
     return jsonify(images = images, pbws = pbws)
 
 
-def init_app(app, url_prefix='/api/v2'):
+def init_app(app, url_prefix='/api/dp'):
     global parent_app
     parent_app = app
     app.register_blueprint(devportal_api, url_prefix=url_prefix)
