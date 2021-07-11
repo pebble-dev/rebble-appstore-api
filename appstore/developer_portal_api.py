@@ -343,10 +343,10 @@ def get_app_screenshots(app_id, platform):
     if not is_valid_platform(platform):
         return jsonify(error = f"Invalid platform: {platform}", e = "platform.invalid"), 400  
 
-    app = App.query.filter(App.id == app_id)
-    if app.count() < 1:
-        return jsonify(error = "Unknown app", e = "app.notfound"), 400      
-    app = app.one()
+    try:
+        app = App.query.filter(App.id == app_id).one()
+    except NoResultFound as e:
+        return jsonify(error = "Unknown app", e = "app.notfound"), 400    
 
     asset_collection = AssetCollection.query.filter(AssetCollection.app_id == app.id, AssetCollection.platform == platform).one_or_none()
 
