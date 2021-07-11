@@ -428,8 +428,8 @@ def delete_screenshot(app_id, platform, screenshot_id):
     db.session.commit()
     return jsonify(success = True, message = f"Deleted screenshot {screenshot_id}", id = screenshot_id, platform = platform)
         
-@devportal_api.route('/wizard/rename/<developerID>', methods=['POST'])
-def wizard_rename_developer(developerID):
+@devportal_api.route('/wizard/rename/<developer_id>', methods=['POST'])
+def wizard_rename_developer(developer_id):
     result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
     if result.status_code != 200:
         abort(401)
@@ -456,7 +456,7 @@ def wizard_rename_developer(developerID):
         return jsonify(error = f"Missing required field: name", e = "missing.field.name"), 400
 
     
-    developer = Developer.query.filter_by(id=developerID).one_or_none()
+    developer = Developer.query.filter_by(id=developer_id).one_or_none()
     if developer is None:
         return jsonify(error = "Developer not found", e = "id.invalid"), 404
     developer.name = req["name"]
