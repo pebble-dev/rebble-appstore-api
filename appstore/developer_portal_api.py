@@ -497,13 +497,13 @@ def wizard_update_app(app_id):
     if app is None:
         return jsonify(error = "Unknown app", e = "app.notfound"), 404
 
-    changeOccured = False
+    change_occured = False
 
     if "developer_id" in req:
             app.developer_id = req["developer_id"]
-            changeOccured = True
+            change_occured = True
     
-    if changeOccured:
+    if change_occured:
         try:
             db.session.commit()
             return jsonify(success = True, id = app.id, developer_id = app.developer_id)
