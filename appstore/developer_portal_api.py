@@ -399,8 +399,8 @@ def new_app_screenshots(app_id, platform):
 
     return jsonify(success = True, id = new_image_id, platform = platform)
 
-@devportal_api.route('/app/<app_id>/screenshots/<platform>/<screenshotID>', methods=['DELETE'])
-def delete_screenshot(app_id, platform, screenshotID):
+@devportal_api.route('/app/<app_id>/screenshots/<platform>/<screenshot_id>', methods=['DELETE'])
+def delete_screenshot(app_id, platform, screenshot_id):
     try:
         app = App.query.filter(App.id == app_id).one()
     except NoResultFound as e:
@@ -422,16 +422,16 @@ def delete_screenshot(app_id, platform, screenshotID):
     if asset_collection is None:
         return jsonify(error = "Screenshot not found", e = "screenshot.invalid"), 404
 
-    if screenshotID not in asset_collection.screenshots:
+    if screenshot_id not in asset_collection.screenshots:
         return jsonify(error = "Screenshot not found", e = "screenshot.invalid"), 404
 
     if len(asset_collection.screenshots) < 2:
         # Not sure what code to use here. It's not 400 as the request is valid. Don't want a 200. For now returning 409 Conflict
         return jsonify(error = "At least one screenshot required per platform", e = "screenshot.islast", message = "Cannot delete the last screenshot as at least one screenshot is required per platform. Add another screenshot then retry the delete operation."), 409
 
-    asset_collection.screenshots = list(filter(lambda x: x != screenshotID, asset_collection.screenshots))
+    asset_collection.screenshots = list(filter(lambda x: x != screenshot_id, asset_collection.screenshots))
     db.session.commit()
-    return jsonify(success = True, message = f"Deleted screenshot {screenshotID}", id = screenshotID, platform = platform)
+    return jsonify(success = True, message = f"Deleted screenshot {screenshot_id}", id = screenshot_id, platform = platform)
         
 @devportal_api.route('/wizard/rename/<developerID>', methods=['POST'])
 def wizard_rename_developer(developerID):
