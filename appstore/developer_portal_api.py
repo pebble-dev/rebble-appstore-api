@@ -188,7 +188,10 @@ def submit_new_app():
             if algolia_index:
                 algolia_index.partial_update_objects([algolia_app(app_obj)], { 'createIfNotExists': True })
 
-            announce_new_app(app_obj)
+            try:
+                announce_new_app(app_obj)
+            except Exception:
+                # We don't want to fail just because Discord is being weird
 
             return jsonify(success = True, id = app_obj.id)
 
@@ -319,7 +322,10 @@ def submit_new_release(appID):
     upload_pbw(release_new, request.files['pbw'])
     db.session.commit()
 
-    announce_release(app, release_new)
+    try:
+        announce_release(app, release_new)
+    except Exception:
+        # We don't want to fail just because Discord webhook is being weird
 
     return jsonify(success = True)
         
