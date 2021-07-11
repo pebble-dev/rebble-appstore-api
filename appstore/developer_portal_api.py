@@ -140,11 +140,6 @@ def submit_new_app():
             # Remove any platforms with no screenshots
             screenshots = {k: v for k, v in screenshots.items() if v}
 
-            # # Add blanks to optional values
-            # for x in ["source","website"]:
-            #     if x not in params:
-            #         params[x] = ""
-
             app_obj = App(
                 id = id_generator.generate(),
                 app_uuid = appinfo['uuid'],
@@ -423,7 +418,11 @@ def delete_screenshot(app_id, platform, screenshot_id):
 
     if len(asset_collection.screenshots) < 2:
         # Not sure what code to use here. It's not 400 as the request is valid. Don't want a 200. For now returning 409 Conflict
-        return jsonify(error = "At least one screenshot required per platform", e = "screenshot.islast", message = "Cannot delete the last screenshot as at least one screenshot is required per platform. Add another screenshot then retry the delete operation."), 409
+        return jsonify(
+            error = "At least one screenshot required per platform", 
+            e = "screenshot.islast", 
+            message = "Cannot delete the last screenshot as at least one screenshot is required per platform. Add another screenshot then retry the delete operation."
+        ), 409
 
     asset_collection.screenshots = list(filter(lambda x: x != screenshot_id, asset_collection.screenshots))
     db.session.commit()
@@ -503,15 +502,12 @@ def wizard_update_app(app_id):
     if "developer_id" in req:
             app.developer_id = req["developer_id"]
             changeOccured = True
-
-
     
     if changeOccured:
         try:
             db.session.commit()
             return jsonify(success = True, id = app.id, developer_id = app.developer_id)
-        except Exception as e:
-            print(e)
+        except IntegrityError as e:
             return jsonify(error = "Failed to update developer ID. Does new ID exist?", e = "body.invalid"), 400
     else:
         return jsonify(error = "Invalid POST body. Provide one or more fields to update", e = "body.invalid"), 400
