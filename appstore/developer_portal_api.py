@@ -138,11 +138,7 @@ def submit_new_app():
                         screenshots[platform].append(request.files[f"screenshot-{platform}-{x}"])
 
             # Remove any platforms with no screenshots
-            clearedScreenshots = dict(screenshots)
-            for platform in screenshots:
-                if len(clearedScreenshots[platform]) < 1:
-                    del clearedScreenshots[platform]
-            screenshots = clearedScreenshots
+            screenshots = {k: v for k, v in screenshots.items() if v}
 
             # # Add blanks to optional values
             # for x in ["source","website"]:
