@@ -402,11 +402,11 @@ def clone_asset_collection_without_images(appObject, platform):
             break
 
     clone_asset_collection = AssetCollection(
-                platform=platform,
-                description=og_asset_collection.description,
-                screenshots=[],
-                headers = og_asset_collection.headers,
-                banner = og_asset_collection.banner
+        platform=platform,
+        description=og_asset_collection.description,
+        screenshots=[],
+        headers = og_asset_collection.headers,
+        banner = og_asset_collection.banner
     )
 
     return clone_asset_collection
@@ -419,3 +419,20 @@ def get_app_description(app):
     for p in valid_platforms:
         if p in app.asset_collections:
             return app.asset_collections[p].description
+
+def is_users_developer_id(developer_id):
+    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
+    if result.status_code != 200:
+        abort(401)
+    me = result.json()
+    if not me['id'] == developer_id:
+        return False
+    else:
+        return True
+
+def user_is_wizard():
+    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
+    if result.status_code != 200:
+        abort(401)
+    me = result.json()
+    return me['is_wizard']

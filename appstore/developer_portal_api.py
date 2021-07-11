@@ -12,7 +12,7 @@ from werkzeug.exceptions import BadRequest
 from sqlalchemy.exc import DataError
 from zipfile import BadZipFile
 
-from .utils import authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file, generate_image_url
+from .utils import authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file, generate_image_url, is_users_developer_id, user_is_wizard
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
 from .pbw import PBW, release_from_pbw
 from .s3 import upload_pbw, upload_asset
@@ -219,11 +219,7 @@ def update_app_fields(app_id):
             return jsonify(error="Unknown app", e="app.notfound"), 400
 
         # Check we own the app
-        result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
-        if result.status_code != 200:
-            abort(401)
-        me = result.json()
-        if not me['id'] == app.developer_id:
+        if not is_users_developer_id(app.developer_id):
             return jsonify(error = "You do not have permission to modify that app", e = "permission.denied"), 403
 
         # Check any enum fields
@@ -264,11 +260,7 @@ def submit_new_release(app_id):
         return jsonify(error = "Unknown app", e = "app.notfound"), 400
 
     # Check we own the app
-    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
-    if result.status_code != 200:
-        abort(401)
-    me = result.json()
-    if me['id'] != app.developer_id:
+    if not is_users_developer_id(app.developer_id):
         return jsonify(error = "You do not have permission to modify that app", e = "permission.denied"), 403
 
     data = dict(request.form)
@@ -354,11 +346,7 @@ def new_app_screenshots(app_id, platform):
         return jsonify(error = "Unknown app", e = "app.notfound"), 400
 
     # Check we own the app
-    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
-    if result.status_code != 200:
-        abort(401)
-    me = result.json()
-    if not me['id'] == app.developer_id:
+    if not is_users_developer_id(app.developer_id):
         return jsonify(error = "You do not have permission to modify that app", e = "permission.denied"), 403
 
     if not is_valid_platform(platform):
@@ -398,11 +386,7 @@ def delete_screenshot(app_id, platform, screenshot_id):
         return jsonify(error = "Unknown app", e = "app.notfound"), 400
 
     # Check we own the app
-    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
-    if result.status_code != 200:
-        abort(401)
-    me = result.json()
-    if not me['id'] == app.developer_id:
+    if not is_users_developer_id(app.developer_id):
         return jsonify(error = "You do not have permission to modify that app", e = "permission.denied"), 403
 
     if not is_valid_platform(platform):
@@ -430,11 +414,7 @@ def delete_screenshot(app_id, platform, screenshot_id):
         
 @devportal_api.route('/wizard/rename/<developer_id>', methods=['POST'])
 def wizard_rename_developer(developer_id):
-    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
-    if result.status_code != 200:
-        abort(401)
-    me = result.json()
-    if not me['is_wizard']:
+    if not user_is_wizard():
         return jsonify(error = "You are not a wizard", e = "permission.denied"), 403
 
     permitted_fields = ["name"]
@@ -470,11 +450,7 @@ def wizard_update_app(app_id):
         "developer_id"
     ]
 
-    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
-    if result.status_code != 200:
-        abort(401)
-    me = result.json()
-    if not me['is_wizard']:
+    if not user_is_wizard():
         return jsonify(error = "You are not a wizard", e = "permission.denied"), 403
 
     try:
@@ -513,11 +489,7 @@ def wizard_update_app(app_id):
     
 @devportal_api.route('/wizard/app/<app_id>', methods=['DELETE'])
 def wizard_delete_app(app_id):
-    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
-    if result.status_code != 200:
-        abort(401)
-    me = result.json()
-    if not me['is_wizard']:
+    if not user_is_wizard():
         return jsonify(error = "You are not a wizard", e = "permission.denied"), 403
     
     app = App.query.filter(App.id == app_id).one_or_none()
@@ -535,11 +507,7 @@ def wizard_delete_app(app_id):
 
 @devportal_api.route('/wizard/app/<app_id>', methods=['GET'])
 def wizard_get_s3_assets(app_id):
-    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
-    if result.status_code != 200:
-        abort(401)
-    me = result.json()
-    if not me['is_wizard']:
+    if not user_is_wizard():
         return jsonify(error = "You are not a wizard", e = "permission.denied"), 403
     
     app = App.query.filter(App.id == app_id).one_or_none()
