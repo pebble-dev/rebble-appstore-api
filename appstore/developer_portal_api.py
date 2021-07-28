@@ -40,7 +40,10 @@ if config['ALGOLIA_ADMIN_API_KEY']:
     algolia_client = algoliasearch.Client(config['ALGOLIA_APP_ID'], config['ALGOLIA_ADMIN_API_KEY'])
     algolia_index = algolia_client.init_index(config['ALGOLIA_INDEX'])
 else:
-    algolia_index = None
+    if config['ALGOLIA_DISABLE']:
+        algolia_index = None
+    else:
+        raise KeyError(f"ALGOLIA_ADMIN_API_KEY not set. Either set key or disable algolia integration with ALGOLIA_DISABLE=True")
 
 @devportal_api.route('/onboard', methods=['POST'])
 def create_developer():

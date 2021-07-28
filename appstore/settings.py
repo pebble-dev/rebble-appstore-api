@@ -19,5 +19,6 @@ config = {
     'S3_ASSET_BUCKET': os.environ.get('S3_ASSET_BUCKET', 'rebble-appstore-assets'),
     'S3_ASSET_PATH': os.environ.get('S3_ASSET_PATH', ''),
     'HONEYCOMB_KEY': os.environ.get('HONEYCOMB_KEY', None),
-    'DISCORD_HOOK_URL': os.environ.get('DISCORD_HOOK_URL', None)
+    'DISCORD_HOOK_URL': os.environ.get('DISCORD_HOOK_URL', None),
+    'ALGOLIA_DISABLE': os.environ.get('ALGOLIA_DISABLE', False)
 }
