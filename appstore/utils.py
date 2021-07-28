@@ -2,8 +2,12 @@ import os
 import random
 import time
 import imghdr
+import struct
+
 from typing import Dict, Optional
 from uuid import getnode
+
+from PIL import Image
 
 import requests
 from flask import request, abort, url_for
@@ -25,7 +29,6 @@ class ObjectIdGenerator:
     def generate(self):
         self.counter = (self.counter + 1) % 0xFFFFFF
         return f'{(int(time.time()) % 0xFFFFFFFF):08x}{self.node_id:06x}{self.pid:04x}{self.counter:06x}'
-
 
 id_generator = ObjectIdGenerator()
 
@@ -367,17 +370,42 @@ def validate_new_app_fields(request):
     if not "large_icon" in request.files:
         return False, "Missing file: large_icon", "large_icon.missing"
 
+    if not is_valid_image_file(request.files["large_icon"]):
+        return False, "Illegal image type: " + str(imgtype), "large_icon.illegalvalue"
+
+    # Check file types and file sizes of optional images
+    if "banner" in request.files:
+        if not is_valid_image_file(request.files["banner"]):
+            return False, "Illegal image type: " + str(imgtype), "banner.illegalvalue"
+
+        if not is_valid_image_size(request.files["banner"], "banner"):
+            max_w, max_h = get_max_image_dimensions("banner")
+            return False, f"Banner has incorrect dimensions. Should be {max_w}x{max_h}", "banner.illegaldimensions"
+
+    if "small_icon" in request.files:
+        if not is_valid_image_file(request.files["small_icon"]):
+            return False, "Illegal image type: " + str(imgtype), "small_icon.illegalvalue"
+
+        if not is_valid_image_size(request.files["small_icon"], "small_icon"):
+            max_w, max_h = get_max_image_dimensions("small_icon")
+            return False, f"Small icon has incorrect dimensions. Should be {max_w}x{max_h}", "small_icon.illegaldimensions"
+    
+
     # Check we have screenshots
     # We must have at least 1 screenshot in total
-    # Here we also validate it's an image file
+    # Here we also validate it's an image file and it's the correct dimenisions
 
     at_least_one_screenshot = False
     for platform in screenshot_platforms:
-        for x in range(6):
+        for x in range(1, 6):
              if f"screenshot-{platform}-{x}" in request.files:
                 imgtype = imghdr.what(request.files[f"screenshot-{platform}-{x}"])
                 if imgtype in permitted_image_types:
-                    at_least_one_screenshot = True
+                    if is_valid_image_size(request.files[f"screenshot-{platform}-{x}"], f"screenshot_{platform}"):
+                        at_least_one_screenshot = True
+                    else:
+                        max_w, max_h = get_max_image_dimensions(f"screenshot_{platform}")
+                        return False, f"A screenshot has the incorrect dimensions for platform {platform}. Should be {max_w}x{max_h}.", "screenshots.illegaldimensions"
                 else:
                     return False, "Illegal image type: " + str(imgtype), "screenshots.illegalvalue"
 
@@ -436,3 +464,36 @@ def user_is_wizard():
         abort(401)
     me = result.json()
     return me['is_wizard']
+
+def get_image_size(file):
+    im = Image.open(file)
+    return im.size
+
+def is_valid_image_size(file, image_type):
+    
+    max_w, max_h = get_max_image_dimensions(image_type)
+    image_w, image_h = get_image_size(file)
+
+    if (image_w != max_w) or (image_h != max_h):
+        return False
+    else:
+        return True
+    
+def get_max_image_dimensions(resource_type):
+    max_w = 144
+    max_h = 168
+
+    if resource_type == "banner":
+        max_w = 720
+        max_h = 320
+    elif resource_type == "screenshot_chalk":
+        max_w = 180
+        max_h = 180
+    elif resource_type == "large_icon":
+        max_w = 144
+        max_h = 144
+    elif resource_type == "small_icon":
+        max_w = 48
+        max_h = 48
+
+    return max_w, max_h
