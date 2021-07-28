@@ -95,17 +95,17 @@ def update_my_developer():
         req = request.json
     except BadRequest as e:
         print(e)
-        return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
+        return jsonify(error="Invalid POST body. Expected JSON", e="body.invalid"), 400
 
     if req is None:
-        return jsonify(error = "Invalid POST body. Expected JSON and 'Content-Type: application/json'", e = "request.invalid"), 400
+        return jsonify(error="Invalid POST body. Expected JSON and 'Content-Type: application/json'", e="request.invalid"), 400
 
     for f in req:
         if not f in permitted_fields:
-            return jsonify(error = f"Illegal field: {f}", e = "illegal.field"), 400
+            return jsonify(error=f"Illegal field: {f}", e="illegal.field"), 400
 
     if not "name" in req:
-        return jsonify(error = f"Missing required field: name", e = "missing.field.name"), 400
+        return jsonify(error=f"Missing required field: name", e="missing.field.name"), 400
 
     # Resolve our auth token to our developer ID
     result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
@@ -119,7 +119,7 @@ def update_my_developer():
     developer.name = req["name"]
     db.session.commit()
 
-    return jsonify(success = True, id = developer.id, name = developer.name)
+    return jsonify(success=True, id=developer.id, name=developer.name)
 
 
 @legacy_api.route('/applications/<app_id>/add_heart', methods=['POST'])

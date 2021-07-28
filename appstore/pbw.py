@@ -184,7 +184,7 @@ class PBW(object):
                         process_info_flags=metadata['flags'], icon_resource_id=metadata['icon_resource_id'])
         db.session.add(binary)
         
-def release_from_pbw(app, bundle, release_notes = None, published_date = datetime.datetime.utcnow(), version = '', compatibility = []):
+def release_from_pbw(app, bundle, release_notes=None, published_date=datetime.datetime.utcnow(), version='', compatibility=[]):
     pbw = PBW(bundle, 'aplite')
     js_md5 = None
     if pbw.has_javascript:

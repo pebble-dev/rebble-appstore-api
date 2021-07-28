@@ -14,9 +14,9 @@ try:
         with open('session-token.json', 'r') as f:
             creds = json.load(f)
         session = boto3.Session(
-            aws_access_key_id = creds['Credentials']['AccessKeyId'],
-            aws_secret_access_key = creds['Credentials']['SecretAccessKey'],
-            aws_session_token = creds['Credentials'].get('SessionToken'),
+            aws_access_key_id=creds['Credentials']['AccessKeyId'],
+            aws_secret_access_key=creds['Credentials']['SecretAccessKey'],
+            aws_session_token=creds['Credentials'].get('SessionToken'),
         )
         s3_endpoint = creds.get('S3Endpoint')
 except:

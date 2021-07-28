@@ -50,10 +50,10 @@ def create_developer():
         try:
            req = request.json
         except BadRequest as e:
-            return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
+            return jsonify(error="Invalid POST body. Expected JSON", e="body.invalid"), 400
 
         if req is None:
-            return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
+            return jsonify(error="Invalid POST body. Expected JSON", e="body.invalid"), 400
 
         result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
         if result.status_code != 200:
@@ -61,17 +61,17 @@ def create_developer():
         me = result.json()
 
         if "name" not in req:
-            return jsonify(error = "Missing required field: name", e = "missing.field.name"), 400
+            return jsonify(error="Missing required field: name", e="missing.field.name"), 400
         
         try:
             dev = Developer.query.filter_by(id=me['id']).one()
-            return jsonify(success = True, message = "User is already on board")
+            return jsonify(success=True, message="User is already on board")
         except NoResultFound:
             dev = Developer(id=me['id'], name=req['name'])
             db.session.add(dev)
             db.session.commit()
 
-        return jsonify(success = True, id = me['id'], message = "Onboarded user")
+        return jsonify(success=True, id=me['id'], message="Onboarded user")
 
 @devportal_api.route('/submit', methods=['POST'])
 def submit_new_app():
@@ -96,21 +96,21 @@ def submit_new_app():
                 with pbw.zip.open('appinfo.json') as f:
                     appinfo = json.load(f)
             except BadZipFile as e:
-                return jsonify(error = f"Your pbw file is corrupt or invalid", e = "invalid.pbw"), 400
+                return jsonify(error=f"Your pbw file is corrupt or invalid", e="invalid.pbw"), 400
             except KeyError as e:
-                return jsonify(error = f"Your pbw file is invalid or corrupt", e = "invalid.pbw"), 400
+                return jsonify(error=f"Your pbw file is invalid or corrupt", e="invalid.pbw"), 400
 
 
             appinfo_valid, appinfo_validation_error = is_valid_appinfo(appinfo)
             if not appinfo_valid:
-                return jsonify(error = f"The appinfo.json in your pbw file has the following error: {appinfo_validation_error}", e = "invalid.appinfocontent"), 400
+                return jsonify(error=f"The appinfo.json in your pbw file has the following error: {appinfo_validation_error}", e="invalid.appinfocontent"), 400
             
             # Check app doesn't already exist
             try:
                 if App.query.filter(App.app_uuid == appinfo['uuid']).count() > 0:
-                    return jsonify(error = "An app already exists with that UUID", e = "app.exists"), 400
+                    return jsonify(error="An app already exists with that UUID", e="app.exists"), 400
             except DataError as e:
-                return jsonify(error = "The UUID provided in appinfo.json is invalid", e = "invalid.uuid"), 400
+                return jsonify(error="The UUID provided in appinfo.json is invalid", e="invalid.uuid"), 400
 
             # Get developer ID from auth (This is also where we check the user is authenticated)
             result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
@@ -124,9 +124,9 @@ def submit_new_app():
 
             if developer is None:
                 return jsonify(
-                    error = "You do not have an active developer account.",
-                    e = "account.invalid",
-                    message = "Please visit dev-portal.rebble.io to activate your developer account"), 409
+                    error="You do not have an active developer account.",
+                    e="account.invalid",
+                    message="Please visit dev-portal.rebble.io to activate your developer account"), 409
 
             # Upload banner if present
             if "banner" in request.files:
@@ -144,37 +144,37 @@ def submit_new_app():
             screenshots = {k: v for k, v in screenshots.items() if v}
 
             app_obj = App(
-                id = id_generator.generate(),
-                app_uuid = appinfo['uuid'],
-                asset_collections = {x: AssetCollection(
+                id=id_generator.generate(),
+                app_uuid=appinfo['uuid'],
+                asset_collections={x: AssetCollection(
                     platform=x,
                     description=params['description'],
                     screenshots=[upload_asset(s, s.content_type) for s in screenshots[x]],
-                    headers = [header_asset] if header_asset else [],
-                    banner = None
+                    headers=[header_asset] if header_asset else [],
+                    banner=None
                 ) for x in screenshots},
-                category_id = category_map[params['category']],
-                companions = {}, # companions not supported yet
-                created_at = datetime.datetime.utcnow(),
-                developer = developer,
-                hearts = 0,
-                releases = [],
-                icon_large = upload_asset(request.files['large_icon'], request.files["large_icon"].content_type),
-                icon_small = upload_asset(request.files['small_icon'], request.files["small_icon"].content_type) if 'small_icon' in params else '',
-                source = params['source'] if 'source' in params else "",
-                title = params['title'],
-                type = params['type'],
-                timeline_enabled = False,
-                website = params['website'] if 'source' in params else "",
+                category_id=category_map[params['category']],
+                companions={}, # companions not supported yet
+                created_at=datetime.datetime.utcnow(),
+                developer=developer,
+                hearts=0,
+                releases=[],
+                icon_large=upload_asset(request.files['large_icon'], request.files["large_icon"].content_type),
+                icon_small=upload_asset(request.files['small_icon'], request.files["small_icon"].content_type) if 'small_icon' in params else '',
+                source=params['source'] if 'source' in params else "",
+                title=params['title'],
+                type=params['type'],
+                timeline_enabled=False,
+                website=params['website'] if 'source' in params else "",
             )
             db.session.add(app_obj)
             print(f"Created app {app_obj.id}")
 
             release = release_from_pbw(app_obj, pbw_file,
-                                       release_notes = params['release_notes'],
-                                       published_date = datetime.datetime.utcnow(),
-                                       version = appinfo['versionLabel'],
-                                       compatibility = appinfo.get('targetPlatforms', ['aplite', 'basalt', 'diorite', 'emery']))
+                                       release_notes=params['release_notes'],
+                                       published_date=datetime.datetime.utcnow(),
+                                       version=appinfo['versionLabel'],
+                                       compatibility=appinfo.get('targetPlatforms', ['aplite', 'basalt', 'diorite', 'emery']))
             print(f"Created release {release.id}")
             upload_pbw(release, request.files['pbw'])
             db.session.commit()
@@ -188,17 +188,17 @@ def submit_new_app():
                 # We don't want to fail just because Discord is being weird
                 print("Discord is being weird")
 
-            return jsonify(success = True, id = app_obj.id)
+            return jsonify(success=True, id=app_obj.id)
 
         else:
-            return jsonify(error = appError, e = appErrorCode), 400
+            return jsonify(error=appError, e=appErrorCode), 400
 
 @devportal_api.route('/app/<app_id>', methods=['POST'])
 def update_app_fields(app_id):
         req = request.json
 
         if req is None:
-            return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
+            return jsonify(error="Invalid POST body. Expected JSON", e="body.invalid"), 400
 
         allowed_fields_type_map = {
             "title": str,
@@ -212,7 +212,7 @@ def update_app_fields(app_id):
         # Check all passed fields are allowed
         for x in req:
             if not type(x) == allowed_fields_type_map[x]:
-                return jsonify(error = f"Invalid value for field '{x}'", e = f"invalid.field.{x}"), 400
+                return jsonify(error=f"Invalid value for field '{x}'", e=f"invalid.field.{x}"), 400
 
 
         # Check app exists
@@ -223,21 +223,21 @@ def update_app_fields(app_id):
 
         # Check we own the app
         if not is_users_developer_id(app.developer_id):
-            return jsonify(error = "You do not have permission to modify that app", e = "permission.denied"), 403
+            return jsonify(error="You do not have permission to modify that app", e="permission.denied"), 403
 
         # Check any enum fields
         if "category" in req and not is_valid_category(req["category"]):
-            return jsonify(error = "Invalid value for field: category", e = "invalid.field.category"), 400
+            return jsonify(error="Invalid value for field: category", e="invalid.field.category"), 400
         if "visible" in req and not (req["visible"].lower() == "true" or req["visible"].lower() == "false"):
-            return jsonify(error = "Invalid value for field: visible", e = "invalid.field.visible"), 400
+            return jsonify(error="Invalid value for field: visible", e="invalid.field.visible"), 400
 
         # Disallow change face category
         if "category" in req and app.category == "Faces":
-            return jsonify(error = "Cannot change category for watchface", e = "disallowed.field.category"), 400
+            return jsonify(error="Cannot change category for watchface", e="disallowed.field.category"), 400
 
         # Check title length
         if "title" in req and len(req["title"]) > 45:
-            return jsonify(error = "Title must be less than 45 characters", e = "invalid.field.title"), 400
+            return jsonify(error="Title must be less than 45 characters", e="invalid.field.title"), 400
             
         # Update the app
         for x in req:
@@ -252,7 +252,7 @@ def update_app_fields(app_id):
         if algolia_index:
             algolia_index.partial_update_objects([algolia_app(app)], { 'createIfNotExists': False })
 
-        return jsonify(success = True, id = app.id)
+        return jsonify(success=True, id=app.id)
 
 
 @devportal_api.route('/app/<app_id>/release', methods=['POST'])
@@ -260,19 +260,19 @@ def submit_new_release(app_id):
     try:
         app = App.query.filter(App.id == app_id).one()
     except NoResultFound:
-        return jsonify(error = "Unknown app", e = "app.notfound"), 400
+        return jsonify(error="Unknown app", e="app.notfound"), 400
 
     # Check we own the app
     if not is_users_developer_id(app.developer_id):
-        return jsonify(error = "You do not have permission to modify that app", e = "permission.denied"), 403
+        return jsonify(error="You do not have permission to modify that app", e="permission.denied"), 403
 
     data = dict(request.form)
 
     if "pbw" not in request.files:
-        return jsonify(error = "Missing file: pbw", e = "pbw.missing"), 400
+        return jsonify(error="Missing file: pbw", e="pbw.missing"), 400
 
     if "release_notes" not in data:
-        return jsonify(error = "Missing field: release_notes", e = "release_notes.missing"), 400
+        return jsonify(error="Missing field: release_notes", e="release_notes.missing"), 400
 
     pbw_file = request.files['pbw'].read()
 
@@ -281,34 +281,34 @@ def submit_new_release(app_id):
         with pbw.zip.open('appinfo.json') as f:
             appinfo = json.load(f)
     except BadZipFile as e:
-        return jsonify(error = f"Your pbw file is invalid or corrupted", e = "invalid.pbw"), 400
+        return jsonify(error=f"Your pbw file is invalid or corrupted", e="invalid.pbw"), 400
     except KeyError as e:
-        return jsonify(error = f"Your pbw file is invalid or corrupted", e = "invalid.pbw"), 400
+        return jsonify(error=f"Your pbw file is invalid or corrupted", e="invalid.pbw"), 400
 
     appinfo_valid, appinfo_valid_reason = is_valid_appinfo(appinfo)
     if not appinfo_valid:
-        return jsonify(error = f"The appinfo.json in your pbw file has the following error: {appinfo_valid_reason}", e = "invalid.appinfocontent"), 400
+        return jsonify(error=f"The appinfo.json in your pbw file has the following error: {appinfo_valid_reason}", e="invalid.appinfocontent"), 400
 
     uuid = appinfo['uuid']
     version = appinfo['versionLabel']
         
     if uuid != app.app_uuid:
-        return jsonify(error = "The UUID in appinfo.json does not match the app you are trying to update", e = "uuid.mismatch"), 400
+        return jsonify(error="The UUID in appinfo.json does not match the app you are trying to update", e="uuid.mismatch"), 400
 
-    release_old = Release.query.filter_by(app = app).order_by(Release.published_date.desc()).first()
+    release_old = Release.query.filter_by(app=app).order_by(Release.published_date.desc()).first()
 
     if version <= release_old.version:
         return jsonify(
-            error = f"The version ({version}) is already on the appstore", 
-            e = "version.exists", 
-            message = "The app version in appinfo.json is not greater than the latest release on the store. Please increment versionLabel in your appinfo.json and try again."
+            error=f"The version ({version}) is already on the appstore", 
+            e="version.exists", 
+            message="The app version in appinfo.json is not greater than the latest release on the store. Please increment versionLabel in your appinfo.json and try again."
             ), 400
 
     release_new = release_from_pbw(app, pbw_file,
-                                   release_notes = data["release_notes"],
-                                   published_date = datetime.datetime.utcnow(),
-                                   version = version,
-                                   compatibility = release_old.compatibility)
+                                   release_notes=data["release_notes"],
+                                   published_date=datetime.datetime.utcnow(),
+                                   version=version,
+                                   compatibility=release_old.compatibility)
 
     upload_pbw(release_new, request.files['pbw'])
     db.session.commit()
@@ -319,24 +319,24 @@ def submit_new_release(app_id):
         # We don't want to fail just because Discord webhook is being weird
         print("Discord is being weird")
 
-    return jsonify(success = True)
+    return jsonify(success=True)
         
 # Screenshots 
 @devportal_api.route('/app/<app_id>/screenshots')
 def missing_platform(app_id):
-    return jsonify(error = "Missing platform", e = "platform.missing", message = "Use /app/<id>/screenshots/<platform>"), 400
+    return jsonify(error="Missing platform", e="platform.missing", message="Use /app/<id>/screenshots/<platform>"), 400
     
 @devportal_api.route('/app/<app_id>/screenshots/<platform>', methods=['GET'])
 def get_app_screenshots(app_id, platform):
     # Check app exists
 
     if not is_valid_platform(platform):
-        return jsonify(error = f"Invalid platform: {platform}", e = "platform.invalid"), 400  
+        return jsonify(error=f"Invalid platform: {platform}", e="platform.invalid"), 400  
 
     try:
         app = App.query.filter(App.id == app_id).one()
     except NoResultFound as e:
-        return jsonify(error = "Unknown app", e = "app.notfound"), 400    
+        return jsonify(error="Unknown app", e="app.notfound"), 400    
 
     asset_collection = AssetCollection.query.filter(AssetCollection.app_id == app.id, AssetCollection.platform == platform).one_or_none()
 
@@ -350,14 +350,14 @@ def new_app_screenshots(app_id, platform):
     try:
         app = App.query.filter(App.id == app_id).one()
     except NoResultFound as e:
-        return jsonify(error = "Unknown app", e = "app.notfound"), 400
+        return jsonify(error="Unknown app", e="app.notfound"), 400
 
     # Check we own the app
     if not is_users_developer_id(app.developer_id):
-        return jsonify(error = "You do not have permission to modify that app", e = "permission.denied"), 403
+        return jsonify(error="You do not have permission to modify that app", e="permission.denied"), 403
 
     if not is_valid_platform(platform):
-        return jsonify(error = f"Invalid platform: {platform}", e = "platform.invalid"), 400  
+        return jsonify(error=f"Invalid platform: {platform}", e="platform.invalid"), 400  
 
     asset_collection = AssetCollection.query.filter(AssetCollection.app_id == app.id, AssetCollection.platform == platform).one_or_none()
 
@@ -365,16 +365,16 @@ def new_app_screenshots(app_id, platform):
     if "screenshot" in request.files:
         new_image = request.files["screenshot"]
     else:
-        return jsonify(error = "Missing file: screenshot", e = "screenshot.missing"), 400
+        return jsonify(error="Missing file: screenshot", e="screenshot.missing"), 400
 
     # Check it's a valid image file
     if not is_valid_image_file(new_image):
-        return jsonify(error = "Illegal image type", e = "screenshots.illegalvalue"), 400
+        return jsonify(error="Illegal image type", e="screenshots.illegalvalue"), 400
 
     # Check it's the correct size
     if not is_valid_image_size(new_image, f"screenshot_{platform}"):
         max_w, max_h = get_max_image_dimensions(f"screenshot_{platform}")
-        return jsonify(error = "Invalid image size", e = "screenshots.illegaldimensions", message = f"Image should be {max_w}x{max_h}"), 400
+        return jsonify(error="Invalid image size", e="screenshots.illegaldimensions", message=f"Image should be {max_w}x{max_h}"), 400
 
     if asset_collection is None:
         asset_collection = clone_asset_collection_without_images(app, platform)
@@ -382,7 +382,7 @@ def new_app_screenshots(app_id, platform):
     else:
         # Check we don't already have 5 screenshots in this asset collection
         if len(asset_collection.screenshots) > 4:
-            return jsonify(error = "Maximum number of screenshots for platform", e = "screenshot.full", message = "There are already the maximum number of screenshots allowed for this platform. Delete one and try again"), 409
+            return jsonify(error="Maximum number of screenshots for platform", e="screenshot.full", message="There are already the maximum number of screenshots allowed for this platform. Delete one and try again"), 409
 
     screenshots = list(asset_collection.screenshots)
     new_image_id = upload_asset(new_image, new_image.content_type)
@@ -390,72 +390,72 @@ def new_app_screenshots(app_id, platform):
     asset_collection.screenshots = screenshots
     db.session.commit()
 
-    return jsonify(success = True, id = new_image_id, platform = platform)
+    return jsonify(success=True, id=new_image_id, platform=platform)
 
 @devportal_api.route('/app/<app_id>/screenshots/<platform>/<screenshot_id>', methods=['DELETE'])
 def delete_screenshot(app_id, platform, screenshot_id):
     try:
         app = App.query.filter(App.id == app_id).one()
     except NoResultFound as e:
-        return jsonify(error = "Unknown app", e = "app.notfound"), 400
+        return jsonify(error="Unknown app", e="app.notfound"), 400
 
     # Check we own the app
     if not is_users_developer_id(app.developer_id):
-        return jsonify(error = "You do not have permission to modify that app", e = "permission.denied"), 403
+        return jsonify(error="You do not have permission to modify that app", e="permission.denied"), 403
 
     if not is_valid_platform(platform):
-        return jsonify(error = f"Invalid platform: {platform}", e = "platform.invalid"), 400  
+        return jsonify(error=f"Invalid platform: {platform}", e="platform.invalid"), 400  
 
     asset_collection = AssetCollection.query.filter(AssetCollection.app_id == app.id, AssetCollection.platform == platform).one_or_none()
 
     if asset_collection is None:
-        return jsonify(error = "Screenshot not found", e = "screenshot.invalid"), 404
+        return jsonify(error="Screenshot not found", e="screenshot.invalid"), 404
 
     if screenshot_id not in asset_collection.screenshots:
-        return jsonify(error = "Screenshot not found", e = "screenshot.invalid"), 404
+        return jsonify(error="Screenshot not found", e="screenshot.invalid"), 404
 
     if len(asset_collection.screenshots) < 2:
         # Not sure what code to use here. It's not 400 as the request is valid. Don't want a 200. For now returning 409 Conflict
         return jsonify(
-            error = "At least one screenshot required per platform", 
-            e = "screenshot.islast", 
-            message = "Cannot delete the last screenshot as at least one screenshot is required per platform. Add another screenshot then retry the delete operation."
+            error="At least one screenshot required per platform", 
+            e="screenshot.islast", 
+            message="Cannot delete the last screenshot as at least one screenshot is required per platform. Add another screenshot then retry the delete operation."
         ), 409
 
     asset_collection.screenshots = list(filter(lambda x: x != screenshot_id, asset_collection.screenshots))
     db.session.commit()
-    return jsonify(success = True, message = f"Deleted screenshot {screenshot_id}", id = screenshot_id, platform = platform)
+    return jsonify(success=True, message=f"Deleted screenshot {screenshot_id}", id=screenshot_id, platform=platform)
         
 @devportal_api.route('/wizard/rename/<developer_id>', methods=['POST'])
 def wizard_rename_developer(developer_id):
     if not user_is_wizard():
-        return jsonify(error = "You are not a wizard", e = "permission.denied"), 403
+        return jsonify(error="You are not a wizard", e="permission.denied"), 403
 
     permitted_fields = ["name"]
 
     try:
         req = request.json
     except BadRequest as e:
-        return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
+        return jsonify(error="Invalid POST body. Expected JSON", e="body.invalid"), 400
 
     if req is None:
-        return jsonify(error = "Invalid POST body. Expected JSON and 'Content-Type: application/json'", e = "request.invalid"), 400
+        return jsonify(error="Invalid POST body. Expected JSON and 'Content-Type: application/json'", e="request.invalid"), 400
 
     for f in req:
         if f not in permitted_fields:
-            return jsonify(error = f"Illegal field: {f}", e = "illegal.field"), 400
+            return jsonify(error=f"Illegal field: {f}", e="illegal.field"), 400
 
     if "name" not in req:
-        return jsonify(error = f"Missing required field: name", e = "missing.field.name"), 400
+        return jsonify(error=f"Missing required field: name", e="missing.field.name"), 400
 
     
     developer = Developer.query.filter_by(id=developer_id).one_or_none()
     if developer is None:
-        return jsonify(error = "Developer not found", e = "id.invalid"), 404
+        return jsonify(error="Developer not found", e="id.invalid"), 404
     developer.name = req["name"]
     db.session.commit()
 
-    return jsonify(success = True, id = developer.id, name = developer.name)
+    return jsonify(success=True, id=developer.id, name=developer.name)
 
 @devportal_api.route('/wizard/app/<app_id>', methods=['POST'])
 def wizard_update_app(app_id):
@@ -465,25 +465,25 @@ def wizard_update_app(app_id):
     ]
 
     if not user_is_wizard():
-        return jsonify(error = "You are not a wizard", e = "permission.denied"), 403
+        return jsonify(error="You are not a wizard", e="permission.denied"), 403
 
     try:
         req = request.json
     except BadRequest as e:
-        return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
+        return jsonify(error="Invalid POST body. Expected JSON", e="body.invalid"), 400
 
     if req is None:
-        return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
+        return jsonify(error="Invalid POST body. Expected JSON", e="body.invalid"), 400
 
 
     for x in req:
         if x not in allowed_fields:
-            return jsonify(error = f"Illegal field: {x}", e = "illegal.field"), 400
+            return jsonify(error=f"Illegal field: {x}", e="illegal.field"), 400
 
     app = App.query.filter(App.id == app_id).one_or_none()
 
     if app is None:
-        return jsonify(error = "Unknown app", e = "app.notfound"), 404
+        return jsonify(error="Unknown app", e="app.notfound"), 404
 
     change_occured = False
 
@@ -494,21 +494,21 @@ def wizard_update_app(app_id):
     if change_occured:
         try:
             db.session.commit()
-            return jsonify(success = True, id = app.id, developer_id = app.developer_id)
+            return jsonify(success=True, id=app.id, developer_id=app.developer_id)
         except IntegrityError as e:
-            return jsonify(error = "Failed to update developer ID. Does new ID exist?", e = "body.invalid"), 400
+            return jsonify(error="Failed to update developer ID. Does new ID exist?", e="body.invalid"), 400
     else:
-        return jsonify(error = "Invalid POST body. Provide one or more fields to update", e = "body.invalid"), 400
+        return jsonify(error="Invalid POST body. Provide one or more fields to update", e="body.invalid"), 400
 
     
 @devportal_api.route('/wizard/app/<app_id>', methods=['DELETE'])
 def wizard_delete_app(app_id):
     if not user_is_wizard():
-        return jsonify(error = "You are not a wizard", e = "permission.denied"), 403
+        return jsonify(error="You are not a wizard", e="permission.denied"), 403
     
     app = App.query.filter(App.id == app_id).one_or_none()
     if app is None:
-        return jsonify(error = "Unknown app", e = "app.notfound"), 404
+        return jsonify(error="Unknown app", e="app.notfound"), 404
 
     App.query.filter(App.id == app_id).delete()
 
@@ -517,16 +517,16 @@ def wizard_delete_app(app_id):
     if algolia_index:
         algolia_index.delete_objects([algolia_app(app)])
 
-    return jsonify(success = True, id = app.id)
+    return jsonify(success=True, id=app.id)
 
 @devportal_api.route('/wizard/app/<app_id>', methods=['GET'])
 def wizard_get_s3_assets(app_id):
     if not user_is_wizard():
-        return jsonify(error = "You are not a wizard", e = "permission.denied"), 403
+        return jsonify(error="You are not a wizard", e="permission.denied"), 403
     
     app = App.query.filter(App.id == app_id).one_or_none()
     if app is None:
-        return jsonify(error = "Unknown app", e = "app.notfound"), 404
+        return jsonify(error="Unknown app", e="app.notfound"), 404
 
     images = []
     pbws = []
