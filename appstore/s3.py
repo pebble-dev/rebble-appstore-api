@@ -48,8 +48,10 @@ def upload_asset(file, mime_type = None):
                 mime_type = "image/gif"
             elif file.endswith(".jpg") or file.endswith(".jpeg"):
                 mime_type = "image/jpeg"
-            else:
+            elif file.endswith(".png"):
                 mime_type = "image/png"
+            else:
+                raise Exception(f"Unknown or unsupported mime_type for file provided to update_asset")
 
         s3 = session.client('s3', endpoint_url=s3_endpoint)
         s3.upload_file(file, config['S3_ASSET_BUCKET'], filename, ExtraArgs = {'ContentType': mime_type})
