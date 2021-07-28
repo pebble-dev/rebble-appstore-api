@@ -85,7 +85,7 @@ class PBW(object):
             return self.manifest
 
         if self.get_real_path(self.MANIFEST_FILENAME) not in self.zip.namelist():
-            raise Exception("Could not find {}; are you sure this is a PebbleBundle?".format(self.MANIFEST_FILENAME))
+            raise FileNotFoundError("Could not find {}; are you sure this is a PebbleBundle?".format(self.MANIFEST_FILENAME))
 
         self.manifest = json.loads(self.zip.read(self.get_real_path(self.MANIFEST_FILENAME)).decode('utf-8'))
         return self.manifest
