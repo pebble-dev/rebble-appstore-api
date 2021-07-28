@@ -1,6 +1,7 @@
 from algoliasearch import algoliasearch
 from flask import Blueprint, jsonify, abort, request
 from flask_cors import CORS
+from werkzeug.exceptions import BadRequest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -92,7 +93,7 @@ def update_my_developer():
 
     try:
         req = request.json
-    except Exception as e:
+    except BadRequest as e:
         print(e)
         return jsonify(error = "Invalid POST body. Expected JSON", e = "body.invalid"), 400
 
