@@ -295,7 +295,11 @@ def submit_new_release(app_id):
     release_old = Release.query.filter_by(app = app).order_by(Release.published_date.desc()).first()
 
     if version <= release_old.version:
-        return jsonify(error = f"The version ({version}) is already on the appstore", e = "version.exists", message = "The app version in appinfo.json is not greater than the latest release on the store. Please increment versionLabel in your appinfo.json and try again."), 400
+        return jsonify(
+            error = f"The version ({version}) is already on the appstore", 
+            e = "version.exists", 
+            message = "The app version in appinfo.json is not greater than the latest release on the store. Please increment versionLabel in your appinfo.json and try again."
+            ), 400
 
     release_new = release_from_pbw(app, pbw_file,
                                    release_notes = data["release_notes"],
