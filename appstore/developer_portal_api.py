@@ -361,9 +361,11 @@ def new_app_screenshots(app_id, platform):
 
     asset_collection = AssetCollection.query.filter(AssetCollection.app_id == app.id, AssetCollection.platform == platform).one_or_none()
 
-    # Get the first image, this is a single image API
-    new_image = next(iter(request.files.to_dict()))
-    new_image = request.files[new_image]
+    # Get the image, this is a single image API
+    if "screenshot" in request.files:
+        new_image = request.files["screenshot"]
+    else:
+        return jsonify(error = "Missing file: screenshot", e = "screenshot.missing"), 400
 
     # Check it's a valid image file
     if not is_valid_image_file(new_image):
