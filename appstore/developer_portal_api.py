@@ -17,7 +17,7 @@ from .models import Category, db, App, Developer, Release, CompanionApp, Binary,
 from .pbw import PBW, release_from_pbw
 from .s3 import upload_pbw, upload_asset
 from .settings import config
-from .discord import announce_release, announce_new_app
+from .discord import announce_release, announce_new_app, audit_log
 
 
 parent_app = None
@@ -448,6 +448,7 @@ def wizard_rename_developer(developer_id):
     if developer is None:
         return jsonify(error="Developer not found", e="id.invalid"), 404
     developer.name = req["name"]
+    audit_log(f'Renamed developer {developer_id} to {req["name"]}')
     db.session.commit()
 
     return jsonify(success=True, id=developer.id, name=developer.name)
@@ -485,6 +486,7 @@ def wizard_update_app(app_id):
     if "developer_id" in req:
             app.developer_id = req["developer_id"]
             change_occured = True
+            audit_log(f'Set developer ID of app \'{app.title}\' ({app.id}) to {req["developer_id"]}')
     
     if change_occured:
         try:
@@ -511,6 +513,8 @@ def wizard_delete_app(app_id):
 
     if algolia_index:
         algolia_index.delete_objects([algolia_app(app)])
+
+    audit_log(f'Deleted app \'{app.title}\' ({app.id})')
 
     return jsonify(success=True, id=app.id)
 

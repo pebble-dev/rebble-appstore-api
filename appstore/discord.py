@@ -3,7 +3,7 @@ import requests
 import random
 
 from .settings import config
-from .utils import get_app_description, generate_image_url
+from .utils import get_app_description, generate_image_url, who_am_i
 from appstore.models import App
 
 party_time_emoji = ["🎉","🥳","👏","❤️","🥰","🎊"]
@@ -86,8 +86,38 @@ def announce_new_app(app):
 
     send_discord_webhook(request_data)
 
+def audit_log(operation):
+    request_fields = [{
+             "name": "Who?",
+             "value": who_am_i()
+         }, {
+             "name": "What?",
+             "value": operation
+         }
+     ]
+
+    request_data = {
+        "embeds": [{
+            "title": f"Wizard Audit Log 🪄",
+            "color": int("0xffaa00", 0),
+            "description": f"Someone has executed a wizard operation on the developer portal",
+            "thumbnail": {
+                "url": "https://dev-portal.rebble.io/res/img/large_icon_launchpad.svg",
+                "height": 80,
+                "width": 80
+            },
+            "fields": request_fields
+        }]
+    }
+
+    send_admin_discord_webhook(request_data)
 
 def send_discord_webhook(request_data):
     if config['DISCORD_HOOK_URL'] is not None:
         headers = {'Content-Type': 'application/json'}
         requests.post(config['DISCORD_HOOK_URL'], data=json.dumps(request_data), headers=headers)
+
+def send_admin_discord_webhook(request_data):
+    if config['DISCORD_ADMIN_HOOK_URL'] is not None:
+        headers = {'Content-Type': 'application/json'}
+        requests.post(config['DISCORD_ADMIN_HOOK_URL'], data=json.dumps(request_data), headers=headers)

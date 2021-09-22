@@ -504,3 +504,8 @@ def get_max_image_dimensions(resource_type):
         max_h = 48
 
     return max_w, max_h
+
+def who_am_i():
+    result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
+    me = result.json()
+    return f'{me["name"]} ({me["uid"]})'
