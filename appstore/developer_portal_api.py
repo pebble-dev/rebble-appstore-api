@@ -204,9 +204,9 @@ def update_app_fields(app_id):
             "visible": bool
         }
 
-        # Check all passed fields are allowed
+        # Check all valid passed fields are correct type
         for x in req:
-            if not type(x) == allowed_fields_type_map[x]:
+            if (x in allowed_fields_type_map) and (not type(x) == allowed_fields_type_map[x]):
                 return jsonify(error=f"Invalid value for field '{x}'", e=f"invalid.field.{x}"), 400
 
 
