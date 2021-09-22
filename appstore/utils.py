@@ -273,11 +273,16 @@ def authed_request(method, url, **kwargs):
     headers['Authorization'] = f'Bearer {get_access_token()}'
     return requests.request(method, url, **kwargs)
 
-
-def get_uid():
-    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me?flag_authed=true")
+def demand_authed_request(method, url, **kwargs):
+    result = authed_request(method, url, **kwargs)
     if result.status_code != 200:
         abort(401)
+    return result
+
+
+
+def get_uid():
+    result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me?flag_authed=true")
     beeline.add_context_field('user', result.json()['uid'])
     return result.json()['uid']
 
@@ -455,9 +460,7 @@ def get_app_description(app):
             return app.asset_collections[p].description
 
 def is_users_developer_id(developer_id):
-    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
-    if result.status_code != 200:
-        abort(401)
+    result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
     me = result.json()
     if not me['id'] == developer_id:
         return False
@@ -465,9 +468,7 @@ def is_users_developer_id(developer_id):
         return True
 
 def user_is_wizard():
-    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
-    if result.status_code != 200:
-        abort(401)
+    result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
     me = result.json()
     return me['is_wizard']
 

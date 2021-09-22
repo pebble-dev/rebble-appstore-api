@@ -12,7 +12,7 @@ from werkzeug.exceptions import BadRequest
 from sqlalchemy.exc import DataError
 from zipfile import BadZipFile
 
-from .utils import authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file, is_valid_image_size, get_max_image_dimensions, generate_image_url, is_users_developer_id, user_is_wizard, newAppValidationException
+from .utils import authed_request, demand_authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file, is_valid_image_size, get_max_image_dimensions, generate_image_url, is_users_developer_id, user_is_wizard, newAppValidationException
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
 from .pbw import PBW, release_from_pbw
 from .s3 import upload_pbw, upload_asset
@@ -55,9 +55,7 @@ def create_developer():
         if req is None:
             return jsonify(error="Invalid POST body. Expected JSON", e="body.invalid"), 400
 
-        result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
-        if result.status_code != 200:
-            abort(401)
+        result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
         me = result.json()
 
         if "name" not in req:
@@ -114,9 +112,7 @@ def submit_new_app():
             return jsonify(error="The UUID provided in appinfo.json is invalid", e="invalid.uuid"), 400
 
         # Get developer ID from auth (This is also where we check the user is authenticated)
-        result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
-        if result.status_code != 200:
-            abort(401)
+        result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
         me = result.json()
         developer_id = me['id']
 

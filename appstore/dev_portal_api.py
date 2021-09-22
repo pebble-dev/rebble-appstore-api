@@ -22,9 +22,7 @@ else:
 
 @legacy_api.route('/users/me')
 def me():
-    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
-    if result.status_code != 200:
-        abort(401)
+    result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
     me = result.json()
     rebble_id = me['rebble_id']
     added_ids = [x.app_id for x in LockerEntry.query.filter_by(user_id=rebble_id)]
@@ -45,9 +43,7 @@ def me():
 
 @legacy_api.route('/users/me/developer', methods=['GET'])
 def my_apps():
-    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
-    if result.status_code != 200:
-        abort(401)
+    result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
     me = result.json()
 
     developer_id = me['id']
@@ -59,9 +55,7 @@ def my_apps():
     developer = Developer.query.filter_by(id=developer_id).one_or_none()
 
     # Check if is wizard (Can we update auth to return this with /me/pebble/appstore?)
-    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
-    if result.status_code != 200:
-        abort(401)
+    result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
     me_detailed = result.json()
     me["is_wizard"] = me_detailed["is_wizard"]
 
@@ -108,9 +102,7 @@ def update_my_developer():
         return jsonify(error=f"Missing required field: name", e="missing.field.name"), 400
 
     # Resolve our auth token to our developer ID
-    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
-    if result.status_code != 200:
-        abort(401)
+    result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
     me = result.json()
     developer_id = me["id"]
 
