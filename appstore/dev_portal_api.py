@@ -5,7 +5,7 @@ from werkzeug.exceptions import BadRequest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
-from .utils import authed_request, get_uid
+from .utils import authed_request, demand_authed_request, get_uid
 from .models import LockerEntry, UserLike, db, App, Developer
 from .settings import config
 
