@@ -133,7 +133,7 @@ def submit_new_app():
 
         # Copy screenshots to platform map
         for platform in screenshots:
-            for x in range(6):
+            for x in range(1,6):
                 if f"screenshot-{platform}-{x}" in request.files:
                     screenshots[platform].append(request.files[f"screenshot-{platform}-{x}"])
 
@@ -370,7 +370,7 @@ def new_app_screenshots(app_id, platform):
     if not is_valid_image_size(new_image, f"screenshot_{platform}"):
         max_w, max_h = get_max_image_dimensions(f"screenshot_{platform}")
         return jsonify(error="Invalid image size", e="screenshots.illegaldimensions", message=f"Image should be {max_w}x{max_h}"), 400
-
+        
     if asset_collection is None:
         asset_collection = clone_asset_collection_without_images(app, platform)
         app.asset_collections[platform] = asset_collection
