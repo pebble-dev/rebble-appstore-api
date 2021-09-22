@@ -12,7 +12,7 @@ from werkzeug.exceptions import BadRequest
 from sqlalchemy.exc import DataError
 from zipfile import BadZipFile
 
-from .utils import authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file, is_valid_image_size, get_max_image_dimensions, generate_image_url, is_users_developer_id, user_is_wizard
+from .utils import authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file, is_valid_image_size, get_max_image_dimensions, generate_image_url, is_users_developer_id, user_is_wizard, newAppValidationException
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
 from .pbw import PBW, release_from_pbw
 from .s3 import upload_pbw, upload_asset
@@ -76,122 +76,121 @@ def create_developer():
 @devportal_api.route('/submit', methods=['POST'])
 def submit_new_app():
         # Validate all fields
-        appOK, appError, appErrorCode  = validate_new_app_fields(request)
+        try:
+            validate_new_app_fields(request)
+        except newAppValidationException as validationError:
+            return jsonify(error=validationError.message, e=validationError.e), 400
 
 
-        if appOK == True:
+        params = dict(request.form)
 
-            params = dict(request.form)
+        screenshots = {
+            "aplite": [],
+            "basalt": [],
+            "chalk": [],
+            "diorite": []
+        }
 
-            screenshots = {
-                "aplite": [],
-                "basalt": [],
-                "chalk": [],
-                "diorite": []
-            }
-
-            try:
-                pbw_file = request.files['pbw'].read()
-                pbw = PBW(pbw_file, 'aplite')
-                with pbw.zip.open('appinfo.json') as f:
-                    appinfo = json.load(f)
-            except BadZipFile as e:
-                return jsonify(error=f"Your pbw file is corrupt or invalid", e="invalid.pbw"), 400
-            except KeyError as e:
-                return jsonify(error=f"Your pbw file is invalid or corrupt", e="invalid.pbw"), 400
+        try:
+            pbw_file = request.files['pbw'].read()
+            pbw = PBW(pbw_file, 'aplite')
+            with pbw.zip.open('appinfo.json') as f:
+                appinfo = json.load(f)
+        except BadZipFile as e:
+            return jsonify(error=f"Your pbw file is corrupt or invalid", e="invalid.pbw"), 400
+        except KeyError as e:
+            return jsonify(error=f"Your pbw file is invalid or corrupt", e="invalid.pbw"), 400
 
 
-            appinfo_valid, appinfo_validation_error = is_valid_appinfo(appinfo)
-            if not appinfo_valid:
-                return jsonify(error=f"The appinfo.json in your pbw file has the following error: {appinfo_validation_error}", e="invalid.appinfocontent"), 400
+        appinfo_valid, appinfo_validation_error = is_valid_appinfo(appinfo)
+        if not appinfo_valid:
+            return jsonify(error=f"The appinfo.json in your pbw file has the following error: {appinfo_validation_error}", e="invalid.appinfocontent"), 400
             
-            # Check app doesn't already exist
-            try:
-                if App.query.filter(App.app_uuid == appinfo['uuid']).count() > 0:
-                    return jsonify(error="An app already exists with that UUID", e="app.exists"), 400
-            except DataError as e:
-                return jsonify(error="The UUID provided in appinfo.json is invalid", e="invalid.uuid"), 400
+        # Check app doesn't already exist
+        try:
+            if App.query.filter(App.app_uuid == appinfo['uuid']).count() > 0:
+                return jsonify(error="An app already exists with that UUID", e="app.exists"), 400
+        except DataError as e:
+            return jsonify(error="The UUID provided in appinfo.json is invalid", e="invalid.uuid"), 400
 
-            # Get developer ID from auth (This is also where we check the user is authenticated)
-            result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
-            if result.status_code != 200:
-                abort(401)
-            me = result.json()
-            developer_id = me['id']
+        # Get developer ID from auth (This is also where we check the user is authenticated)
+        result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
+        if result.status_code != 200:
+            abort(401)
+        me = result.json()
+        developer_id = me['id']
 
-            # Find developer
-            developer = Developer.query.filter(Developer.id == developer_id).one_or_none()
+        # Find developer
+        developer = Developer.query.filter(Developer.id == developer_id).one_or_none()
 
-            if developer is None:
-                return jsonify(
-                    error="You do not have an active developer account.",
-                    e="account.invalid",
-                    message="Please visit dev-portal.rebble.io to activate your developer account"), 409
+        if developer is None:
+            return jsonify(
+                error="You do not have an active developer account.",
+                e="account.invalid",
+                message="Please visit dev-portal.rebble.io to activate your developer account"), 409
 
-            # Upload banner if present
-            if "banner" in request.files:
-                header_asset = upload_asset(request.files["banner"], request.files["banner"].content_type)
-            else:
-                header_asset = None
-
-            # Copy screenshots to platform map
-            for platform in screenshots:
-                for x in range(6):
-                    if f"screenshot-{platform}-{x}" in request.files:
-                        screenshots[platform].append(request.files[f"screenshot-{platform}-{x}"])
-
-            # Remove any platforms with no screenshots
-            screenshots = {k: v for k, v in screenshots.items() if v}
-
-            app_obj = App(
-                id=id_generator.generate(),
-                app_uuid=appinfo['uuid'],
-                asset_collections={x: AssetCollection(
-                    platform=x,
-                    description=params['description'],
-                    screenshots=[upload_asset(s, s.content_type) for s in screenshots[x]],
-                    headers=[header_asset] if header_asset else [],
-                    banner=None
-                ) for x in screenshots},
-                category_id=category_map[params['category']],
-                companions={}, # companions not supported yet
-                created_at=datetime.datetime.utcnow(),
-                developer=developer,
-                hearts=0,
-                releases=[],
-                icon_large=upload_asset(request.files['large_icon'], request.files["large_icon"].content_type),
-                icon_small=upload_asset(request.files['small_icon'], request.files["small_icon"].content_type) if 'small_icon' in params else '',
-                source=params['source'] if 'source' in params else "",
-                title=params['title'],
-                type=params['type'],
-                timeline_enabled=False,
-                website=params['website'] if 'source' in params else "",
-            )
-            db.session.add(app_obj)
-            print(f"Created app {app_obj.id}")
-
-            release = release_from_pbw(app_obj, pbw_file,
-                                       release_notes=params['release_notes'],
-                                       published_date=datetime.datetime.utcnow(),
-                                       version=appinfo['versionLabel'],
-                                       compatibility=appinfo.get('targetPlatforms', ['aplite', 'basalt', 'diorite', 'emery']))
-            print(f"Created release {release.id}")
-            upload_pbw(release, request.files['pbw'])
-            db.session.commit()
-
-            if algolia_index:
-                algolia_index.partial_update_objects([algolia_app(app_obj)], { 'createIfNotExists': True })
-
-            try:
-                announce_new_app(app_obj)
-            except Exception:
-                # We don't want to fail just because Discord is being weird
-                print("Discord is being weird")
-
-            return jsonify(success=True, id=app_obj.id)
-
+        # Upload banner if present
+        if "banner" in request.files:
+            header_asset = upload_asset(request.files["banner"], request.files["banner"].content_type)
         else:
-            return jsonify(error=appError, e=appErrorCode), 400
+            header_asset = None
+
+        # Copy screenshots to platform map
+        for platform in screenshots:
+            for x in range(6):
+                if f"screenshot-{platform}-{x}" in request.files:
+                    screenshots[platform].append(request.files[f"screenshot-{platform}-{x}"])
+
+        # Remove any platforms with no screenshots
+        screenshots = {k: v for k, v in screenshots.items() if v}
+
+        app_obj = App(
+            id=id_generator.generate(),
+            app_uuid=appinfo['uuid'],
+            asset_collections={x: AssetCollection(
+                platform=x,
+                description=params['description'],
+                screenshots=[upload_asset(s, s.content_type) for s in screenshots[x]],
+                headers=[header_asset] if header_asset else [],
+                banner=None
+            ) for x in screenshots},
+            category_id=category_map[params['category']],
+            companions={}, # companions not supported yet
+            created_at=datetime.datetime.utcnow(),
+            developer=developer,
+            hearts=0,
+            releases=[],
+            icon_large=upload_asset(request.files['large_icon'], request.files["large_icon"].content_type),
+            icon_small=upload_asset(request.files['small_icon'], request.files["small_icon"].content_type) if 'small_icon' in params else '',
+            source=params['source'] if 'source' in params else "",
+            title=params['title'],
+            type=params['type'],
+            timeline_enabled=False,
+            website=params['website'] if 'source' in params else "",
+        )
+        db.session.add(app_obj)
+        print(f"Created app {app_obj.id}")
+
+        release = release_from_pbw(app_obj, pbw_file,
+                                   release_notes=params['release_notes'],
+                                   published_date=datetime.datetime.utcnow(),
+                                   version=appinfo['versionLabel'],
+                                   compatibility=appinfo.get('targetPlatforms', ['aplite', 'basalt', 'diorite', 'emery']))
+        print(f"Created release {release.id}")
+        upload_pbw(release, request.files['pbw'])
+        db.session.commit()
+
+        if algolia_index:
+            algolia_index.partial_update_objects([algolia_app(app_obj)], { 'createIfNotExists': True })
+
+        try:
+            announce_new_app(app_obj)
+        except Exception:
+            # We don't want to fail just because Discord is being weird
+            print("Discord is being weird")
+
+        return jsonify(success=True, id=app_obj.id)
+
 
 @devportal_api.route('/app/<app_id>', methods=['POST'])
 def update_app_fields(app_id):

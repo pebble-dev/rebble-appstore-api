@@ -32,6 +32,12 @@ class ObjectIdGenerator:
 
 id_generator = ObjectIdGenerator()
 
+class newAppValidationException(Exception):
+    def __init__(self, message="Failed to validate new app", e_code="generic.error"):
+        self.message = message
+        self.e = e_code
+        super().__init__(self.message)
+
 plat_dimensions = {
     'aplite': (144, 168),
     'basalt': (144, 168),
@@ -347,48 +353,48 @@ def validate_new_app_fields(request):
     
     # First we check we have all the always required fields
     if not all(k in data for k in required_fields):
-        return False, "Missing a required field", "field.missing"
+        raise newAppValidationException("Missing a required field", "field.missing")
 
     if data["type"] not in permitted_sub_types:
-        return False, "Invalid submission type. Expected watchface or watchapp", "subtype.illegal"
+        raise newAppValidationException("Invalid submission type. Expected watchface or watchapp", "subtype.illegal")
 
     # If we have an app, check app-specific fields
     if data["type"] == "watchapp":
         if not "category" in data:
-            return False, "Missing field: category", "category.missing"
+            raise newAppValidationException("Missing field: category", "category.missing")
 
         if not is_valid_category(data["category"]):
-            return False, "Illegal value for category", "category.illegal"
+            raise newAppValidationException("Illegal value for category", "category.illegal")
 
         if not "small_icon" in request.files:
-            return False, "Missing file: small_icon", "small_icon.missing"
+            raise newAppValidationException("Missing file: small_icon", "small_icon.missing")
 
         if not "banner" in request.files:
-            return False, "Missing file: banner", "banner.missing"
+            raise newAppValidationException("Missing file: banner", "banner.missing")
 
     # Check we have a large icon file
     if not "large_icon" in request.files:
-        return False, "Missing file: large_icon", "large_icon.missing"
+        raise newAppValidationException("Missing file: large_icon", "large_icon.missing")
 
     if not is_valid_image_file(request.files["large_icon"]):
-        return False, "Illegal image type: " + str(imgtype), "large_icon.illegalvalue"
+        raise newAppValidationException("Illegal image type: " + str(imgtype), "large_icon.illegalvalue")
 
     # Check file types and file sizes of optional images
     if "banner" in request.files:
         if not is_valid_image_file(request.files["banner"]):
-            return False, "Illegal image type: " + str(imgtype), "banner.illegalvalue"
+            raise newAppValidationException("Illegal image type: " + str(imgtype), "banner.illegalvalue")
 
         if not is_valid_image_size(request.files["banner"], "banner"):
             max_w, max_h = get_max_image_dimensions("banner")
-            return False, f"Banner has incorrect dimensions. Should be {max_w}x{max_h}", "banner.illegaldimensions"
+            raise newAppValidationException(f"Banner has incorrect dimensions. Should be {max_w}x{max_h}", "banner.illegaldimensions")
 
     if "small_icon" in request.files:
         if not is_valid_image_file(request.files["small_icon"]):
-            return False, "Illegal image type: " + str(imgtype), "small_icon.illegalvalue"
+            raise newAppValidationException("Illegal image type: " + str(imgtype), "small_icon.illegalvalue")
 
         if not is_valid_image_size(request.files["small_icon"], "small_icon"):
             max_w, max_h = get_max_image_dimensions("small_icon")
-            return False, f"Small icon has incorrect dimensions. Should be {max_w}x{max_h}", "small_icon.illegaldimensions"
+            raise newAppValidationException(f"Small icon has incorrect dimensions. Should be {max_w}x{max_h}", "small_icon.illegaldimensions")
     
 
     # Check we have screenshots
@@ -405,16 +411,16 @@ def validate_new_app_fields(request):
                         at_least_one_screenshot = True
                     else:
                         max_w, max_h = get_max_image_dimensions(f"screenshot_{platform}")
-                        return False, f"A screenshot has the incorrect dimensions for platform {platform}. Should be {max_w}x{max_h}.", "screenshots.illegaldimensions"
+                        raise newAppValidationException(f"A screenshot has the incorrect dimensions for platform {platform}. Should be {max_w}x{max_h}.", "screenshots.illegaldimensions")
                 else:
-                    return False, "Illegal image type: " + str(imgtype), "screenshots.illegalvalue"
+                    raise newAppValidationException("Illegal image type: " + str(imgtype), "screenshots.illegalvalue")
 
     if not at_least_one_screenshot:
-        return False, "No screenshots provided", "screenshots.noneprovided"
+        raise newAppValidationException("No screenshots provided", "screenshots.noneprovided")
 
     # Check we have a pbw
     if "pbw" not in request.files:
-        return False, "Missing file: pbw", "pbw.missing"
+        raise newAppValidationException("Missing file: pbw", "pbw.missing")
 
     # If you are here, you are good to go
 
