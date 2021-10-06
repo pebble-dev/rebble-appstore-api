@@ -3,6 +3,7 @@ __author__ = 'katharine'
 
 import json
 import os
+import io
 import struct
 import uuid
 import zipfile
@@ -42,14 +43,19 @@ class PBW(object):
         'emery': ('emery/',),
     }
 
-    def __init__(self, bundle_path, platform):
+    def __init__(self, pbw, platform):
         self.platform = platform
-        bundle_abs_path = os.path.abspath(bundle_path)
-        if not os.path.exists(bundle_abs_path):
-            raise Exception("Bundle does not exist: " + bundle_path)
+        # pbw can be file path or bytes bundle. Determine which
+        if isinstance(pbw, str):
+            bundle = os.path.abspath(bundle_path)
+            if not os.path.exists(bundle):
+                raise Exception("Bundle does not exist: " + bundle_path)
 
-        self.zip = zipfile.ZipFile(bundle_abs_path)
-        self.path = bundle_abs_path
+            self.path = bundle_abs_path
+        else:
+            bundle = io.BytesIO(pbw)
+
+        self.zip = zipfile.ZipFile(bundle)
         self.manifest = None
         self.header = None
         self._zip_contents = set(self.zip.namelist())
@@ -79,7 +85,7 @@ class PBW(object):
             return self.manifest
 
         if self.get_real_path(self.MANIFEST_FILENAME) not in self.zip.namelist():
-            raise Exception("Could not find {}; are you sure this is a PebbleBundle?".format(self.MANIFEST_FILENAME))
+            raise FileNotFoundError("Could not find {}; are you sure this is a PebbleBundle?".format(self.MANIFEST_FILENAME))
 
         self.manifest = json.loads(self.zip.read(self.get_real_path(self.MANIFEST_FILENAME)).decode('utf-8'))
         return self.manifest
@@ -178,8 +184,8 @@ class PBW(object):
                         process_info_flags=metadata['flags'], icon_resource_id=metadata['icon_resource_id'])
         db.session.add(binary)
         
-def release_from_pbw(app, filename, release_notes = None, published_date = datetime.datetime.utcnow(), version = '', compatibility = []):
-    pbw = PBW(filename, 'aplite')
+def release_from_pbw(app, bundle, release_notes=None, published_date=datetime.datetime.utcnow(), version='', compatibility=[]):
+    pbw = PBW(bundle, 'aplite')
     js_md5 = None
     if pbw.has_javascript:
         with pbw.zip.open('pebble-js-app.js', 'r') as f:
@@ -199,7 +205,7 @@ def release_from_pbw(app, filename, release_notes = None, published_date = datet
     db.session.add(release)
     
     for platform in PLATFORMS:
-        pbw = PBW(filename, platform)
+        pbw = PBW(bundle, platform)
         pbw.create_binary(release)
     
     return release

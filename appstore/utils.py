@@ -1,8 +1,13 @@
 import os
 import random
 import time
+import imghdr
+import struct
+
 from typing import Dict, Optional
 from uuid import getnode
+
+from PIL import Image
 
 import requests
 from flask import request, abort, url_for
@@ -25,8 +30,13 @@ class ObjectIdGenerator:
         self.counter = (self.counter + 1) % 0xFFFFFF
         return f'{(int(time.time()) % 0xFFFFFFFF):08x}{self.node_id:06x}{self.pid:04x}{self.counter:06x}'
 
-
 id_generator = ObjectIdGenerator()
+
+class newAppValidationException(Exception):
+    def __init__(self, message="Failed to validate new app", e_code="generic.error"):
+        self.message = message
+        self.e = e_code
+        super().__init__(self.message)
 
 plat_dimensions = {
     'aplite': (144, 168),
@@ -35,6 +45,20 @@ plat_dimensions = {
     'diorite': (144, 168),
     'emery': (200, 228),
 }
+
+valid_platforms = [
+    "aplite",
+    "basalt",
+    "chalk",
+    "diorite",
+    "emery"
+]
+
+permitted_image_types = [
+    "png",
+    "jpeg",
+    "gif",
+]
 
 
 def init_app(app):
@@ -124,6 +148,7 @@ def jsonify_app(app: App, target_hw: str) -> dict:
             '48x48': generate_image_url(app.icon_small, 48, 48, True),
         },
         'published_date': app.published_date,
+        'visible': app.visible,
     }
     if release:
         result['latest_release'] = {
@@ -248,10 +273,239 @@ def authed_request(method, url, **kwargs):
     headers['Authorization'] = f'Bearer {get_access_token()}'
     return requests.request(method, url, **kwargs)
 
-
-def get_uid():
-    result = authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me?flag_authed=true")
+def demand_authed_request(method, url, **kwargs):
+    result = authed_request(method, url, **kwargs)
     if result.status_code != 200:
         abort(401)
+    return result
+
+
+
+def get_uid():
+    result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me?flag_authed=true")
     beeline.add_context_field('user', result.json()['uid'])
     return result.json()['uid']
+
+def is_valid_category(category):
+    valid_categories = [
+        "Daily",
+        "Tools & Utilities",
+        "Notifications",
+        "Remotes",
+        "Health & Fitness",
+        "Games",
+        "Index",
+        "Faces",
+        "GetSomeApps",
+    ]
+
+    return category in valid_categories
+
+def is_valid_platform(platform):
+    return platform in valid_platforms
+
+def is_valid_appinfo(appinfo_object):
+    # Currently we only need to validate so far as it's ready for the store upload
+
+    basic_required_fields = [
+        "uuid",
+        "versionLabel",
+        "sdkVersion",
+        "appKeys",
+        "longName",
+        "versionCode",
+        "shortName",
+        "capabilities",
+        "targetPlatforms",
+        "watchapp",
+        "resources"
+    ]
+
+    appinfo = appinfo_object
+
+    for f in basic_required_fields:
+        if not f in appinfo:
+            return False, f"Missing field '{f}'"
+
+    for p in appinfo["targetPlatforms"]:
+        if not is_valid_platform(p):
+            return False, f"Invalid target platform '{p}'"
+
+    return True, ""
+    
+def validate_new_app_fields(request):
+    data = dict(request.form)
+
+    required_fields = [
+        "title",
+        "type",
+        "description",
+        "release_notes",
+        "category"
+    ]
+
+    screenshot_platforms = [
+        "aplite",
+        "basalt",
+        "chalk",
+        "diorite",
+    ]
+
+    permitted_sub_types = [
+        "watchface",
+        "watchapp"
+    ]
+    
+    # First we check we have all the always required fields
+    if not all(k in data for k in required_fields):
+        raise newAppValidationException("Missing a required field", "field.missing")
+
+    if data["type"] not in permitted_sub_types:
+        raise newAppValidationException("Invalid submission type. Expected watchface or watchapp", "subtype.illegal")
+
+    # If we have an app, check app-specific fields
+    if data["type"] == "watchapp":
+        if not "category" in data:
+            raise newAppValidationException("Missing field: category", "category.missing")
+
+        if not is_valid_category(data["category"]):
+            raise newAppValidationException("Illegal value for category", "category.illegal")
+
+        if not "small_icon" in request.files:
+            raise newAppValidationException("Missing file: small_icon", "small_icon.missing")
+
+        if not "banner" in request.files:
+            raise newAppValidationException("Missing file: banner", "banner.missing")
+
+    # Check we have a large icon file
+    if not "large_icon" in request.files:
+        raise newAppValidationException("Missing file: large_icon", "large_icon.missing")
+
+    if not is_valid_image_file(request.files["large_icon"]):
+        raise newAppValidationException("Illegal image type: " + str(imgtype), "large_icon.illegalvalue")
+
+    # Check file types and file sizes of optional images
+    if "banner" in request.files:
+        if not is_valid_image_file(request.files["banner"]):
+            raise newAppValidationException("Illegal image type: " + str(imgtype), "banner.illegalvalue")
+
+        if not is_valid_image_size(request.files["banner"], "banner"):
+            max_w, max_h = get_max_image_dimensions("banner")
+            raise newAppValidationException(f"Banner has incorrect dimensions. Should be {max_w}x{max_h}", "banner.illegaldimensions")
+
+    if "small_icon" in request.files:
+        if not is_valid_image_file(request.files["small_icon"]):
+            raise newAppValidationException("Illegal image type: " + str(imgtype), "small_icon.illegalvalue")
+
+        if not is_valid_image_size(request.files["small_icon"], "small_icon"):
+            max_w, max_h = get_max_image_dimensions("small_icon")
+            raise newAppValidationException(f"Small icon has incorrect dimensions. Should be {max_w}x{max_h}", "small_icon.illegaldimensions")
+    
+
+    # Check we have screenshots
+    # We must have at least 1 screenshot in total
+    # Here we also validate it's an image file and it's the correct dimenisions
+
+    at_least_one_screenshot = False
+    for platform in screenshot_platforms:
+        for x in range(1, 6):
+             if f"screenshot-{platform}-{x}" in request.files:
+                imgtype = imghdr.what(request.files[f"screenshot-{platform}-{x}"])
+                if imgtype in permitted_image_types:
+                    if is_valid_image_size(request.files[f"screenshot-{platform}-{x}"], f"screenshot_{platform}"):
+                        at_least_one_screenshot = True
+                    else:
+                        max_w, max_h = get_max_image_dimensions(f"screenshot_{platform}")
+                        raise newAppValidationException(f"A screenshot has the incorrect dimensions for platform {platform}. Should be {max_w}x{max_h}.", "screenshots.illegaldimensions")
+                else:
+                    raise newAppValidationException("Illegal image type: " + str(imgtype), "screenshots.illegalvalue")
+
+    if not at_least_one_screenshot:
+        raise newAppValidationException("No screenshots provided", "screenshots.noneprovided")
+
+    # Check we have a pbw
+    if "pbw" not in request.files:
+        raise newAppValidationException("Missing file: pbw", "pbw.missing")
+
+    # If you are here, you are good to go
+
+    return True, "", ""
+
+def clone_asset_collection_without_images(appObject, platform):
+    # Find an existing asset collection for AppID and clone the header and desc.
+    # Used for uploading new screenshots to a previously nonexisted asset collection.
+    # We take an app object as calling func. will have already done a lookup
+    for p in valid_platforms:
+        og_asset_collection = AssetCollection.query.filter(AssetCollection.app_id == appObject.id, AssetCollection.platform == p).one_or_none()
+        if og_asset_collection is not None:
+            break
+
+    clone_asset_collection = AssetCollection(
+        platform=platform,
+        description=og_asset_collection.description,
+        screenshots=[],
+        headers = og_asset_collection.headers,
+        banner = og_asset_collection.banner
+    )
+
+    return clone_asset_collection
+
+def is_valid_image_file(file):
+    imgtype = imghdr.what(file)
+    return imgtype in permitted_image_types
+
+def get_app_description(app):
+    for p in valid_platforms:
+        if p in app.asset_collections:
+            return app.asset_collections[p].description
+
+def is_users_developer_id(developer_id):
+    result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
+    me = result.json()
+    if not me['id'] == developer_id:
+        return False
+    else:
+        return True
+
+def user_is_wizard():
+    result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
+    me = result.json()
+    return me['is_wizard']
+
+def get_image_size(file):
+    im = Image.open(file)
+    return im.size
+
+def is_valid_image_size(file, image_type):
+    
+    max_w, max_h = get_max_image_dimensions(image_type)
+    image_w, image_h = get_image_size(file)
+
+    if (image_w != max_w) or (image_h != max_h):
+        return False
+    else:
+        return True
+    
+def get_max_image_dimensions(resource_type):
+    max_w = 144
+    max_h = 168
+
+    if resource_type == "banner":
+        max_w = 720
+        max_h = 320
+    elif resource_type == "screenshot_chalk":
+        max_w = 180
+        max_h = 180
+    elif resource_type == "large_icon":
+        max_w = 144
+        max_h = 144
+    elif resource_type == "small_icon":
+        max_w = 48
+        max_h = 48
+
+    return max_w, max_h
+
+def who_am_i():
+    result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
+    me = result.json()
+    return f'{me["name"]} ({me["uid"]})'
