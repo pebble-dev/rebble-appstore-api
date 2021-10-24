@@ -12,7 +12,7 @@ from werkzeug.exceptions import BadRequest
 from sqlalchemy.exc import DataError
 from zipfile import BadZipFile
 
-from .utils import authed_request, demand_authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file, is_valid_image_size, get_max_image_dimensions, generate_image_url, is_users_developer_id, user_is_wizard, newAppValidationException
+from .utils import authed_request, demand_authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file, is_valid_image_size, get_max_image_dimensions, generate_image_url, is_users_developer_id, user_is_wizard, newAppValidationException, algolia_app
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
 from .pbw import PBW, release_from_pbw
 from .s3 import upload_pbw, upload_asset
