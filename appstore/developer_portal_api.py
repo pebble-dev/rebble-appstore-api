@@ -508,15 +508,15 @@ def wizard_delete_app(app_id):
         return jsonify(error="Unknown app", e="app.notfound"), 404
 
     if algolia_index:
-        algolia_index.delete_objects([algolia_app(app)])
+        algolia_index.delete_objects([app_id])
 
     App.query.filter(App.id == app_id).delete()
 
-    db.session.commit()
-
     audit_log(f'Deleted app \'{app.title}\' ({app.id})')
 
-    return jsonify(success=True, id=app.id)
+    db.session.commit()
+
+    return jsonify(success=True, id=app_id)
 
 @devportal_api.route('/wizard/app/<app_id>', methods=['GET'])
 def wizard_get_s3_assets(app_id):
