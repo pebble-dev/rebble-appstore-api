@@ -380,6 +380,7 @@ def new_app_screenshots(app_id, platform):
             return jsonify(error="Maximum number of screenshots for platform", e="screenshot.full", message="There are already the maximum number of screenshots allowed for this platform. Delete one and try again"), 409
 
     screenshots = list(asset_collection.screenshots)
+    new_image.seek(0)
     new_image_id = upload_asset(new_image, new_image.content_type)
     screenshots.append(new_image_id)
     asset_collection.screenshots = screenshots
