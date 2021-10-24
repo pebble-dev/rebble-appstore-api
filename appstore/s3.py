@@ -9,6 +9,29 @@ from .utils import id_generator
 session = None
 s3_endpoint = None
 
+# Try loading creds from the environment.
+try:
+    if session is None and config['AWS_ACCESS_KEY'] is not None and config['AWS_SECRET_KEY'] is not None:
+        session = boto3.Session(
+            aws_access_key_id=config['AWS_ACCESS_KEY'],
+            aws_secret_access_key=config['AWS_SECRET_KEY'],
+        )
+        # XXX: for GCP later:
+        # s3_endpoint = creds.get('S3Endpoint')
+except:
+    pass
+
+
+# "Well, the creds were towed outside the environment."  "Into another
+# environment?" "No, no, they've been towed beyond the environment.  They're
+# not in the environment." "No, but from one environment to another
+# environment." "No, it's beyond the environment.  It's not in an
+# environment.  It's been towed beyond the environment." "Well, what's out
+# there?" "Nothing's out there!" "Well there must be something out there"
+# "There's nothing out there!  All there is sea, and birds, and fish."
+# "And?" "And 20,000 tons of AWS creds." "And what else?" "And a fire."
+#
+# Try loading creds from an on-disk .json.
 try:
     if session is None:
         with open('session-token.json', 'r') as f:

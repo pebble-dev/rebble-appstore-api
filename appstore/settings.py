@@ -21,5 +21,7 @@ config = {
     'HONEYCOMB_KEY': os.environ.get('HONEYCOMB_KEY', None),
     'DISCORD_HOOK_URL': os.environ.get('DISCORD_HOOK_URL', None),
     'DISCORD_ADMIN_HOOK_URL': os.environ.get('DISCORD_ADMIN_HOOK_URL', None),
-    'ALGOLIA_DISABLE': os.environ.get('ALGOLIA_DISABLE', False)
+    'ALGOLIA_DISABLE': os.environ.get('ALGOLIA_DISABLE', False),
+    'AWS_ACCESS_KEY': os.environ.get('AWS_ACCESS_KEY', None),
+    'AWS_SECRET_KEY': os.environ.get('AWS_SECRET_KEY', None),
 }
