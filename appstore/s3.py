@@ -16,8 +16,7 @@ try:
             aws_access_key_id=config['AWS_ACCESS_KEY'],
             aws_secret_access_key=config['AWS_SECRET_KEY'],
         )
-        # XXX: for GCP later:
-        # s3_endpoint = creds.get('S3Endpoint')
+        s3_endpoint = config['S3_ENDPOINT']
 except:
     pass
 

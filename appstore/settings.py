@@ -24,4 +24,5 @@ config = {
     'ALGOLIA_DISABLE': os.environ.get('ALGOLIA_DISABLE', False),
     'AWS_ACCESS_KEY': os.environ.get('AWS_ACCESS_KEY', None),
     'AWS_SECRET_KEY': os.environ.get('AWS_SECRET_KEY', None),
+    'S3_ENDPOINT': os.environ.get('S3_ENDPOINT', None),
 }
