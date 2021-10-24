@@ -81,6 +81,7 @@ def upload_asset(file, mime_type = None):
     
     else:
         print(f"uploading file object '{file.name}' to {config['S3_ASSET_BUCKET']}:{filename}")
+        file.seek(0)
         s3 = session.client('s3', endpoint_url=s3_endpoint)
         s3.upload_fileobj(file, config['S3_ASSET_BUCKET'], filename, ExtraArgs = {'ContentType': mime_type})
     
