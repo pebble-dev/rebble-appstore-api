@@ -503,17 +503,17 @@ def wizard_update_app(app_id):
 def wizard_delete_app(app_id):
     if not user_is_wizard():
         return jsonify(error="You are not a wizard", e="permission.denied"), 403
-    
+
     app = App.query.filter(App.id == app_id).one_or_none()
     if app is None:
         return jsonify(error="Unknown app", e="app.notfound"), 404
 
+    if algolia_index:
+        algolia_index.delete_objects([algolia_app(app)])
+
     App.query.filter(App.id == app_id).delete()
 
     db.session.commit()
-
-    if algolia_index:
-        algolia_index.delete_objects([algolia_app(app)])
 
     audit_log(f'Deleted app \'{app.title}\' ({app.id})')
 
