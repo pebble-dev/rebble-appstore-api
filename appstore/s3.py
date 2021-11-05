@@ -57,6 +57,7 @@ def upload_pbw(release, file):
     else:
         print(f"uploading file object {file.name} to {config['S3_BUCKET']}:{filename}")   
         s3 = session.client('s3', endpoint_url=s3_endpoint)
+        file.seek(0)
         s3.upload_fileobj(file, config['S3_BUCKET'], filename, ExtraArgs = {'ContentType': 'application/zip'})   
 
 def upload_asset(file, mime_type = None):

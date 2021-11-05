@@ -313,9 +313,7 @@ def is_valid_appinfo(appinfo_object):
         "sdkVersion",
         "appKeys",
         "longName",
-        "versionCode",
         "shortName",
-        "capabilities",
         "targetPlatforms",
         "watchapp",
         "resources"
