@@ -162,7 +162,7 @@ def submit_new_app():
             title=params['title'],
             type=params['type'],
             timeline_enabled=False,
-            website=params['website'] if 'source' in params else "",
+            website=params['website'] if 'website' in params else "",
         )
         db.session.add(app_obj)
         print(f"Created app {app_obj.id}")
