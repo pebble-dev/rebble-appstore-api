@@ -22,4 +22,4 @@ urllib3==1.23
 Werkzeug==0.16.1
 boto3==1.9.169
 PyYAML==5.1.2
-pillow==8.3.2
+pillow==9.0.1
