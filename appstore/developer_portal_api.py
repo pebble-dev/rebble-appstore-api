@@ -303,7 +303,7 @@ def submit_new_release(app_id):
                                    release_notes=data["release_notes"],
                                    published_date=datetime.datetime.utcnow(),
                                    version=version,
-                                   compatibility=release_old.compatibility)
+                                   compatibility=appinfo.get('targetPlatforms', ['aplite', 'basalt', 'diorite', 'emery']))
 
     upload_pbw(release_new, request.files['pbw'])
     db.session.commit()
