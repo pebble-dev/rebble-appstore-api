@@ -44,7 +44,7 @@ def jsonify_locker_app(entry):
             'description': asset_fallback(assets, x.platform).description,
             'images': {
                 'icon': generate_image_url(app.icon_small, 48, 48, True),
-                'list': generate_image_url(app.icon_large, 144, 144, True),
+                'list': generate_image_url(app.icon_large, *plat_dimensions[x.platform], True),
                 'screenshot': generate_image_url(asset_fallback(assets, x.platform).screenshots[0],
                                                  *plat_dimensions[x.platform])
             }
