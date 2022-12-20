@@ -421,6 +421,107 @@ def delete_screenshot(app_id, platform, screenshot_id):
     db.session.commit()
     return jsonify(success=True, message=f"Deleted screenshot {screenshot_id}", id=screenshot_id, platform=platform)
         
+@devportal_api.route('/app/<app_id>/banners/<platform>', methods=['GET'])
+def get_app_banners(app_id, platform):
+    # Check app exists
+
+    if not is_valid_platform(platform):
+        return jsonify(error=f"Invalid platform: {platform}", e="platform.invalid"), 400  
+
+    try:
+        app = App.query.filter(App.id == app_id).one()
+    except NoResultFound as e:
+        return jsonify(error="Unknown app", e="app.notfound"), 400    
+
+    asset_collection = AssetCollection.query.filter(AssetCollection.app_id == app.id, AssetCollection.platform == platform).one_or_none()
+
+    if asset_collection is None or asset_collection.headers is None:
+        return jsonify([])
+    else:
+        return jsonify(asset_collection.headers)
+
+@devportal_api.route('/app/<app_id>/banners/<platform>', methods=['POST'])
+def new_app_banner(app_id, platform):
+    try:
+        app = App.query.filter(App.id == app_id).one()
+    except NoResultFound as e:
+        return jsonify(error="Unknown app", e="app.notfound"), 400
+
+    # Check we own the app
+    if not is_users_developer_id(app.developer_id):
+        return jsonify(error="You do not have permission to modify that app", e="permission.denied"), 403
+
+    if not is_valid_platform(platform):
+        return jsonify(error=f"Invalid platform: {platform}", e="platform.invalid"), 400  
+
+    asset_collection = AssetCollection.query.filter(AssetCollection.app_id == app.id, AssetCollection.platform == platform).one_or_none()
+
+    # Get the image, this is a single image API
+    if "banner" in request.files:
+        new_image = request.files["banner"]
+    else:
+        return jsonify(error="Missing file: banner", e="banner.missing"), 400
+
+    # Check it's a valid image file
+    if not is_valid_image_file(new_image):
+        return jsonify(error="Illegal image type", e="banner.illegalvalue"), 400
+
+    # Check it's the correct size
+    if not is_valid_image_size(new_image, "banner"):
+        max_w, max_h = get_max_image_dimensions("banner")
+        return jsonify(error="Invalid image size", e="banner.illegaldimensions", message=f"Image should be {max_w}x{max_h}"), 400
+        
+    if asset_collection is None:
+        asset_collection = clone_asset_collection_without_images(app, platform)
+        app.asset_collections[platform] = asset_collection
+    else:
+        # Check we don't already have 3 banners in this asset collection
+        if len(asset_collection.screenshots) > 3:
+            return jsonify(error="Maximum number of banners for platform", e="banners.full", message="There are already the maximum number of banners allowed for this platform. Delete one and try again"), 409
+
+    headers = list(asset_collection.headers)
+    new_image_id = upload_asset(new_image, new_image.content_type)
+    headers.append(new_image_id)
+    asset_collection.headers = headers
+    db.session.commit()
+
+    return jsonify(success=True, id=new_image_id, platform=platform)
+
+@devportal_api.route('/app/<app_id>/banners/<platform>/<banner_id>', methods=['DELETE'])
+def delete_banner(app_id, platform, banner_id):
+    try:
+        app = App.query.filter(App.id == app_id).one()
+    except NoResultFound as e:
+        return jsonify(error="Unknown app", e="app.notfound"), 400
+
+    # Check we own the app
+    if not is_users_developer_id(app.developer_id):
+        return jsonify(error="You do not have permission to modify that app", e="permission.denied"), 403
+
+    if not is_valid_platform(platform):
+        return jsonify(error=f"Invalid platform: {platform}", e="platform.invalid"), 400  
+
+    asset_collection = AssetCollection.query.filter(AssetCollection.app_id == app.id, AssetCollection.platform == platform).one_or_none()
+
+    if asset_collection is None:
+        return jsonify(error="Banner not found", e="banner.invalid"), 404
+
+    if banner_id not in asset_collection.headers:
+        return jsonify(error="Banner not found", e="banner.invalid"), 404
+
+    if len(asset_collection.headers) < 2 and app.type == "watchapp":
+        # Not sure what code to use here. It's not 400 as the request is valid. Don't want a 200. For now returning 409 Conflict
+        return jsonify(
+            error="At least one header required for watchapps", 
+            e="banner.islast", 
+            message="Cannot delete the last banner as at least one banner is required for watchapps. Add another banner then delete this one."
+        ), 409
+
+    asset_collection.headers = list(filter(lambda x: x != banner_id, asset_collection.headers))
+    db.session.commit()
+    return jsonify(success=True, message=f"Deleted banner {banner_id}", id=banner_id, platform="all")
+        
+
 @devportal_api.route('/wizard/rename/<developer_id>', methods=['POST'])
 def wizard_rename_developer(developer_id):
     if not user_is_wizard():
