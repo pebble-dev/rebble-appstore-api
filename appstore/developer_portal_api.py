@@ -426,12 +426,12 @@ def get_app_banners(app_id, platform):
     # Check app exists
 
     if not is_valid_platform(platform):
-        return jsonify(error=f"Invalid platform: {platform}", e="platform.invalid"), 400  
+        return jsonify(error=f"Invalid platform: {platform}", e="platform.invalid"), 404
 
     try:
         app = App.query.filter(App.id == app_id).one()
     except NoResultFound as e:
-        return jsonify(error="Unknown app", e="app.notfound"), 400    
+        return jsonify(error="Unknown app", e="app.notfound"), 404    
 
     asset_collection = AssetCollection.query.filter(AssetCollection.app_id == app.id, AssetCollection.platform == platform).one_or_none()
 
@@ -445,14 +445,14 @@ def new_app_banner(app_id, platform):
     try:
         app = App.query.filter(App.id == app_id).one()
     except NoResultFound as e:
-        return jsonify(error="Unknown app", e="app.notfound"), 400
+        return jsonify(error="Unknown app", e="app.notfound"), 404
 
     # Check we own the app
     if not is_users_developer_id(app.developer_id):
         return jsonify(error="You do not have permission to modify that app", e="permission.denied"), 403
 
     if not is_valid_platform(platform):
-        return jsonify(error=f"Invalid platform: {platform}", e="platform.invalid"), 400  
+        return jsonify(error=f"Invalid platform: {platform}", e="platform.invalid"), 404
 
     asset_collection = AssetCollection.query.filter(AssetCollection.app_id == app.id, AssetCollection.platform == platform).one_or_none()
 
@@ -477,7 +477,7 @@ def new_app_banner(app_id, platform):
         return jsonify(error="You cannot add a banner for a platform which has no screenshots", e="prerequisite.missing", message="Please add at least one screenshot for the selected platform, then retry the banner upload."), 409
     else:
         # Check we don't already have 3 banners in this asset collection
-        if len(asset_collection.headers) > 3:
+        if len(asset_collection.headers) > 2:
             return jsonify(error="Maximum number of banners for platform", e="banners.full", message="There are already the maximum number of banners allowed for this platform. Delete one and try again"), 409
 
     headers = list(asset_collection.headers)
@@ -493,14 +493,14 @@ def delete_banner(app_id, platform, banner_id):
     try:
         app = App.query.filter(App.id == app_id).one()
     except NoResultFound as e:
-        return jsonify(error="Unknown app", e="app.notfound"), 400
+        return jsonify(error="Unknown app", e="app.notfound"), 404
 
     # Check we own the app
     if not is_users_developer_id(app.developer_id):
         return jsonify(error="You do not have permission to modify that app", e="permission.denied"), 403
 
     if not is_valid_platform(platform):
-        return jsonify(error=f"Invalid platform: {platform}", e="platform.invalid"), 400  
+        return jsonify(error=f"Invalid platform: {platform}", e="platform.invalid"), 404
 
     asset_collection = AssetCollection.query.filter(AssetCollection.app_id == app.id, AssetCollection.platform == platform).one_or_none()
 
