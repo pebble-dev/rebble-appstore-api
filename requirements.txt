@@ -22,7 +22,7 @@ urllib3==1.23
 Werkzeug==0.16.1
 boto3==1.9.169
 PyYAML==5.1.2
-Pillow==8.4
+Pillow==9.3.0
 
 # for serving
 gunicorn==20.1.0
