@@ -34,7 +34,7 @@ honeycomb-beeline==2.12.1
 httplib2==0.20.4
 jmespath==0.10.0
 libhoney==2.1.0
-protobuf==3.19.4
+protobuf==3.19.5
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
 pyparsing==3.0.9
