@@ -472,11 +472,12 @@ def new_app_banner(app_id, platform):
         return jsonify(error="Invalid image size", e="banner.illegaldimensions", message=f"Image should be {max_w}x{max_h}"), 400
         
     if asset_collection is None:
-        asset_collection = clone_asset_collection_without_images(app, platform)
-        app.asset_collections[platform] = asset_collection
+        # With screenshots we create new asset collection
+        # However, if we do that here we can end up with an asset collection for a platform that has no screenshots. So let's fail here and force the user to upload a screenshot for that platform first
+        return jsonify(error="You cannot add a banner for a platform which has no screenshots", e="prerequisite.missing", message="Please add at least one screenshot for the selected platform, then retry the banner upload."), 409
     else:
         # Check we don't already have 3 banners in this asset collection
-        if len(asset_collection.screenshots) > 3:
+        if len(asset_collection.headers) > 3:
             return jsonify(error="Maximum number of banners for platform", e="banners.full", message="There are already the maximum number of banners allowed for this platform. Delete one and try again"), 409
 
     headers = list(asset_collection.headers)
@@ -519,7 +520,7 @@ def delete_banner(app_id, platform, banner_id):
 
     asset_collection.headers = list(filter(lambda x: x != banner_id, asset_collection.headers))
     db.session.commit()
-    return jsonify(success=True, message=f"Deleted banner {banner_id}", id=banner_id, platform="all")
+    return jsonify(success=True, message=f"Deleted banner {banner_id}", id=banner_id, platform=platform)
         
 
 @devportal_api.route('/wizard/rename/<developer_id>', methods=['POST'])
