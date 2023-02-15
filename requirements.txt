@@ -19,7 +19,7 @@ requests==2.27.1
 six==1.15.0
 SQLAlchemy==1.2.8
 urllib3==1.23
-Werkzeug==0.16.1
+Werkzeug==2.2.3
 boto3==1.9.169
 PyYAML==5.1.2
 Pillow==8.4
@@ -43,5 +43,5 @@ rsa==4.8
 s3transfer==0.2.1
 statsd==3.3.0
 uritemplate==4.1.1
-Werkzeug==0.16.1
+Werkzeug==2.2.3
 wrapt==1.14.1
