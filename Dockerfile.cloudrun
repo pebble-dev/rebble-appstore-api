@@ -1,5 +1,4 @@
 FROM python:3.6
-RUN pip install gunicorn google-python-cloud-debugger
 COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 ADD . /code
