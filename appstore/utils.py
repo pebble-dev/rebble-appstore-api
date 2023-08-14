@@ -223,7 +223,7 @@ def asset_fallback(collections: Dict[str, AssetCollection], target_hw='basalt') 
     return next(iter(collections.values()))
 
 
-def generate_image_url(img, width=None, height=None, force=False):
+def generate_image_url(img, width=None, height=None, force=False, freeze=False):
     if img is None:
         return None
     if img == '':
@@ -234,6 +234,8 @@ def generate_image_url(img, width=None, height=None, force=False):
             url += '/exact'
         url += f"/{width or ''}x{height or ''}"
     url += f"/{img}"
+    if freeze:
+        url += "?freeze=true"
     return url
 
 
