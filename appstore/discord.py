@@ -21,7 +21,7 @@ def announce_release(app, release):
                 "title": f"{str(app.type).capitalize()} Update Alert {random_party_emoji()}",
                 "url": f"{config['APPSTORE_ROOT']}/application/{app.id}",
                 "thumbnail": {
-                    "url": generate_image_url(app.icon_large, 80, 80),
+                    "url": generate_image_url(app.icon_large, 80, 80, True, True),
                     "height": 80,
                     "width": 80
                 },
@@ -76,7 +76,7 @@ def announce_new_app(app):
             "url": f"{config['APPSTORE_ROOT']}/application/{app.id}",
             "description": f"There's a new {app.type} on the appstore!",
             "thumbnail": {
-                "url": generate_image_url(app.icon_large, 80, 80),
+                "url": generate_image_url(app.icon_large, 80, 80, True, True),
                 "height": 80,
                 "width": 80
             },
