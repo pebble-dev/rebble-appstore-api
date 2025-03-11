@@ -185,7 +185,7 @@ def submit_new_app():
             algolia_index.partial_update_objects([algolia_app(app_obj)], { 'createIfNotExists': True })
 
         try:
-            announce_new_app(app_obj)
+            announce_new_app(app_obj, pbw.is_generated())
         except Exception:
             # We don't want to fail just because Discord is being weird
             print("Discord is being weird")
@@ -314,7 +314,7 @@ def submit_new_release(app_id):
     db.session.commit()
 
     try:
-        announce_release(app, release_new)
+        announce_release(app, release_new, pbw.is_generated())
     except Exception:
         # We don't want to fail just because Discord webhook is being weird
         print("Discord is being weird")
