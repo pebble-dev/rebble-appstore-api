@@ -2,7 +2,7 @@ import json
 import traceback
 import datetime
 
-from algoliasearch import algoliasearch
+#from algoliasearch import algoliasearch
 from flask import Blueprint, jsonify, abort, request
 from flask_cors import CORS
 
@@ -103,6 +103,12 @@ def submit_new_app():
         appinfo_valid, appinfo_validation_error = is_valid_appinfo(appinfo)
         if not appinfo_valid:
             return jsonify(error=f"The appinfo.json in your pbw file has the following error: {appinfo_validation_error}", e="invalid.appinfocontent"), 400
+        
+        if params["type"] == "watchface" and appinfo["watchapp"]["watchface"] == False:
+            return jsonify(error=f"You selected the app type 'Watchface'. This does not match the configuration in your appinfo.json", e="invalid.appinfocontent"), 400
+        
+        if params["type"] == "watchapp" and appinfo["watchapp"]["watchface"] == True:
+            return jsonify(error=f"You selected the app type 'Watch App'. This does not match the configuration in your appinfo.json", e="invalid.appinfocontent"), 400
             
         # Check app doesn't already exist
         try:
@@ -139,7 +145,7 @@ def submit_new_app():
 
         # Remove any platforms with no screenshots
         screenshots = {k: v for k, v in screenshots.items() if v}
-
+        print("DEBUG small_icon content type: " + request.files["small_icon"].content_type)
         app_obj = App(
             id=id_generator.generate(),
             app_uuid=appinfo['uuid'],
@@ -157,7 +163,7 @@ def submit_new_app():
             hearts=0,
             releases=[],
             icon_large=upload_asset(request.files['large_icon'], request.files["large_icon"].content_type),
-            icon_small=upload_asset(request.files['small_icon'], request.files["small_icon"].content_type) if 'small_icon' in params else '',
+            icon_small=upload_asset(request.files['small_icon'], request.files["small_icon"].content_type) if 'small_icon' in request.files else '',
             source=params['source'] if 'source' in params else "",
             title=params['title'],
             type=params['type'],
