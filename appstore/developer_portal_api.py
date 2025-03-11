@@ -2,7 +2,7 @@ import json
 import traceback
 import datetime
 
-#from algoliasearch import algoliasearch
+from algoliasearch import algoliasearch
 from flask import Blueprint, jsonify, abort, request
 from flask_cors import CORS
 
@@ -145,7 +145,6 @@ def submit_new_app():
 
         # Remove any platforms with no screenshots
         screenshots = {k: v for k, v in screenshots.items() if v}
-        print("DEBUG small_icon content type: " + request.files["small_icon"].content_type)
         app_obj = App(
             id=id_generator.generate(),
             app_uuid=appinfo['uuid'],
