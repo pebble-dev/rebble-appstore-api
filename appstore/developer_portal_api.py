@@ -528,6 +528,73 @@ def delete_banner(app_id, platform, banner_id):
     db.session.commit()
     return jsonify(success=True, message=f"Deleted banner {banner_id}", id=banner_id, platform=platform)
         
+@devportal_api.route('/app/<app_id>/icons', methods=['GET'])
+def get_app_icons(app_id):
+    # Check app exists
+
+    try:
+        app = App.query.filter(App.id == app_id).one()
+    except NoResultFound as e:
+        return jsonify(error="Unknown app", e="app.notfound"), 404    
+
+  
+    return jsonify(small=app.icon_small, large=app.icon_large)
+
+@devportal_api.route('/app/<app_id>/icon/<size>', methods=['GET'])
+def get_app_icon(app_id, size):
+
+    if not size in ["large","small"]:
+        return jsonify(error="Invalid icon size. Expected 'small' or 'large'.", e="size.invalid"), 404 
+
+    # Check app exist
+    try:
+        app = App.query.filter(App.id == app_id).one()
+    except NoResultFound as e:
+        return jsonify(error="Unknown app", e="app.notfound"), 404    
+
+    out = app.icon_small if size == "small" else app.icon_large
+    return jsonify(out)
+
+@devportal_api.route('/app/<app_id>/icon/<size>', methods=['POST'])
+def new_app_icon(app_id, size):
+
+    if not size in ["large","small"]:
+        return jsonify(error="Invalid icon size. Expected 'small' or 'large'.", e="size.invalid"), 404    
+
+    try:
+        app = App.query.filter(App.id == app_id).one()
+    except NoResultFound as e:
+        return jsonify(error="Unknown app", e="app.notfound"), 404
+
+    # Check we own the app
+    if not is_users_developer_id(app.developer_id):
+        return jsonify(error="You do not have permission to modify that app", e="permission.denied"), 403
+
+    # Get the image, this is a single image API
+    if "icon" in request.files:
+        new_image = request.files["icon"]
+    else:
+        return jsonify(error="Missing file: icon", e="icon.missing"), 400
+
+    # Check it's a valid image file
+    if not is_valid_image_file(new_image):
+        return jsonify(error="Illegal image type", e="icon.illegalvalue"), 400
+
+    # Check it's the correct size
+    if not is_valid_image_size(new_image, f"{size}_icon"):
+        max_w, max_h = get_max_image_dimensions("icon")
+        return jsonify(error="Invalid image size", e="icon.illegaldimensions", message=f"Image should be {max_w}x{max_h}"), 400
+        
+    new_image_id = upload_asset(new_image, new_image.content_type)
+    if size == "large":
+        app.icon_large = new_image_id
+    elif size == "small":
+        app.icon_small = new_image_id
+    db.session.commit()
+
+    return jsonify(success=True, id=new_image_id, size=size)
+
+
 
 @devportal_api.route('/wizard/rename/<developer_id>', methods=['POST'])
 def wizard_rename_developer(developer_id):
