@@ -106,8 +106,7 @@ def submit_new_app():
         
         if params["type"] == "watchface" and not appinfo["watchapp"]["watchface"]:
             return jsonify(error=f"You selected the app type 'Watchface'. This does not match the configuration in your appinfo.json", e="invalid.appinfocontent"), 400
-        
-        if params["type"] == "watchapp" and appinfo["watchapp"]["watchface"] == True:
+        elif params["type"] == "watchapp" and appinfo["watchapp"]["watchface"]:
             return jsonify(error=f"You selected the app type 'Watch App'. This does not match the configuration in your appinfo.json", e="invalid.appinfocontent"), 400
             
         # Check app doesn't already exist
