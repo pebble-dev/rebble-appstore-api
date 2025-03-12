@@ -538,7 +538,6 @@ def get_app_icons(app_id):
 
 @devportal_api.route('/app/<app_id>/icon/<size>', methods=['GET'])
 def get_app_icon(app_id, size):
-
     if size not in ("large", "small"):
         return jsonify(error="Invalid icon size. Expected 'small' or 'large'.", e="size.invalid"), 404 
 
