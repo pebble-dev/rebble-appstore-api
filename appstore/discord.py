@@ -11,7 +11,7 @@ party_time_emoji = ["🎉","🥳","👏","❤️","🥰","🎊"]
 def random_party_emoji():
     return random.choice(party_time_emoji)
 
-def announce_release(app, release):
+def announce_release(app, release, is_generated):
         release_notes = release.release_notes
         if not release_notes:
             release_notes = "N/A"
@@ -35,9 +35,9 @@ def announce_release(app, release):
             }]
         }
 
-        send_discord_webhook(request_data)
+        send_discord_webhook(request_data, is_generated)
 
-def announce_new_app(app):
+def announce_new_app(app, is_generated):
     request_fields = [{
              "name": "Name",
              "value": app.title
@@ -70,11 +70,13 @@ def announce_new_app(app):
                     "value": app.website
                 })
 
+    txt_type = app.type if not is_generated else "Generated Watchface"
+
     request_data = {
         "embeds": [{
-            "title": f"New {str(app.type).capitalize()} Alert {random_party_emoji()}",
+            "title": f"New {str(txt_type).capitalize()} Alert {random_party_emoji()}",
             "url": f"{config['APPSTORE_ROOT']}/application/{app.id}",
-            "description": f"There's a new {app.type} on the appstore!",
+            "description": f"There's a new {txt_type} on the appstore!",
             "thumbnail": {
                 "url": generate_image_url(app.icon_large, 80, 80, True, True),
                 "height": 80,
@@ -83,8 +85,8 @@ def announce_new_app(app):
             "fields": request_fields
         }]
     }
-
-    send_discord_webhook(request_data)
+    
+    send_discord_webhook(request_data, is_generated)
 
 def audit_log(operation):
     request_fields = [{
@@ -112,10 +114,15 @@ def audit_log(operation):
 
     send_admin_discord_webhook(request_data)
 
-def send_discord_webhook(request_data):
-    if config['DISCORD_HOOK_URL'] is not None:
-        headers = {'Content-Type': 'application/json'}
-        requests.post(config['DISCORD_HOOK_URL'], data=json.dumps(request_data), headers=headers)
+def send_discord_webhook(request_data, is_generated = False):
+    if not is_generated:
+        if config['DISCORD_HOOK_URL'] is not None:
+            headers = {'Content-Type': 'application/json'}
+            requests.post(config['DISCORD_HOOK_URL'], data=json.dumps(request_data), headers=headers)
+    else:
+        if config['DISCORD_GENERATED_HOOK_URL'] is not None:
+            headers = {'Content-Type': 'application/json'}
+            requests.post(config['DISCORD_GENERATED_HOOK_URL'], data=json.dumps(request_data), headers=headers)            
 
 def send_admin_discord_webhook(request_data):
     if config['DISCORD_ADMIN_HOOK_URL'] is not None:

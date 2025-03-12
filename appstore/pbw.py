@@ -13,6 +13,7 @@ from .models import Binary, App, Release, db
 from .utils import id_generator
 
 PLATFORMS = ['aplite', 'basalt', 'chalk', 'diorite', 'emery']
+GENERATED_ID_PREFIX = "13371337"
 
 class PBW(object):
     MANIFEST_FILENAME = 'manifest.json'
@@ -120,6 +121,9 @@ class PBW(object):
             'uuid': uuid.UUID(bytes=values[16])
         }
         return self.header
+
+    def is_generated(self):
+        return str(self.get_app_metadata()["uuid"]).startswith(GENERATED_ID_PREFIX)
 
     def close(self):
         self.zip.close()

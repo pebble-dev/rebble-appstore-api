@@ -103,6 +103,11 @@ def submit_new_app():
         appinfo_valid, appinfo_validation_error = is_valid_appinfo(appinfo)
         if not appinfo_valid:
             return jsonify(error=f"The appinfo.json in your pbw file has the following error: {appinfo_validation_error}", e="invalid.appinfocontent"), 400
+        
+        if params["type"] == "watchface" and not appinfo["watchapp"]["watchface"]:
+            return jsonify(error=f"You selected the app type 'Watchface'. This does not match the configuration in your appinfo.json", e="invalid.appinfocontent"), 400
+        elif params["type"] == "watchapp" and appinfo["watchapp"]["watchface"]:
+            return jsonify(error=f"You selected the app type 'Watch App'. This does not match the configuration in your appinfo.json", e="invalid.appinfocontent"), 400
             
         # Check app doesn't already exist
         try:
@@ -139,7 +144,6 @@ def submit_new_app():
 
         # Remove any platforms with no screenshots
         screenshots = {k: v for k, v in screenshots.items() if v}
-
         app_obj = App(
             id=id_generator.generate(),
             app_uuid=appinfo['uuid'],
@@ -157,7 +161,7 @@ def submit_new_app():
             hearts=0,
             releases=[],
             icon_large=upload_asset(request.files['large_icon'], request.files["large_icon"].content_type),
-            icon_small=upload_asset(request.files['small_icon'], request.files["small_icon"].content_type) if 'small_icon' in params else '',
+            icon_small=upload_asset(request.files['small_icon'], request.files["small_icon"].content_type) if 'small_icon' in request.files else '',
             source=params['source'] if 'source' in params else "",
             title=params['title'],
             type=params['type'],
@@ -180,7 +184,7 @@ def submit_new_app():
             algolia_index.partial_update_objects([algolia_app(app_obj)], { 'createIfNotExists': True })
 
         try:
-            announce_new_app(app_obj)
+            announce_new_app(app_obj, pbw.is_generated())
         except Exception:
             # We don't want to fail just because Discord is being weird
             print("Discord is being weird")
@@ -309,7 +313,7 @@ def submit_new_release(app_id):
     db.session.commit()
 
     try:
-        announce_release(app, release_new)
+        announce_release(app, release_new, pbw.is_generated())
     except Exception:
         # We don't want to fail just because Discord webhook is being weird
         print("Discord is being weird")
@@ -522,6 +526,68 @@ def delete_banner(app_id, platform, banner_id):
     db.session.commit()
     return jsonify(success=True, message=f"Deleted banner {banner_id}", id=banner_id, platform=platform)
         
+@devportal_api.route('/app/<app_id>/icons', methods=['GET'])
+def get_app_icons(app_id):
+    try:
+        app = App.query.filter(App.id == app_id).one()
+    except NoResultFound as e:
+        return jsonify(error="Unknown app", e="app.notfound"), 404    
+
+  
+    return jsonify(small=app.icon_small, large=app.icon_large)
+
+@devportal_api.route('/app/<app_id>/icon/<size>', methods=['GET'])
+def get_app_icon(app_id, size):
+    if size not in ("large", "small"):
+        return jsonify(error="Invalid icon size. Expected 'small' or 'large'.", e="size.invalid"), 404 
+
+    try:
+        app = App.query.filter(App.id == app_id).one()
+    except NoResultFound as e:
+        return jsonify(error="Unknown app", e="app.notfound"), 404    
+
+    out = app.icon_small if size == "small" else app.icon_large
+    return jsonify(out)
+
+@devportal_api.route('/app/<app_id>/icon/<size>', methods=['POST'])
+def new_app_icon(app_id, size):
+    if size not in ("large", "small"):
+        return jsonify(error="Invalid icon size. Expected 'small' or 'large'.", e="size.invalid"), 404    
+
+    try:
+        app = App.query.filter(App.id == app_id).one()
+    except NoResultFound as e:
+        return jsonify(error="Unknown app", e="app.notfound"), 404
+
+    # Check we own the app
+    if not is_users_developer_id(app.developer_id):
+        return jsonify(error="You do not have permission to modify that app", e="permission.denied"), 403
+
+    # Get the image, this is a single image API
+    if "icon" in request.files:
+        new_image = request.files["icon"]
+    else:
+        return jsonify(error="Missing file: icon", e="icon.missing"), 400
+
+    # Check it's a valid image file
+    if not is_valid_image_file(new_image):
+        return jsonify(error="Illegal image type", e="icon.illegalvalue"), 400
+
+    # Check it's the correct size
+    if not is_valid_image_size(new_image, f"{size}_icon"):
+        max_w, max_h = get_max_image_dimensions("icon")
+        return jsonify(error="Invalid image size", e="icon.illegaldimensions", message=f"Image should be {max_w}x{max_h}"), 400
+        
+    new_image_id = upload_asset(new_image, new_image.content_type)
+    if size == "large":
+        app.icon_large = new_image_id
+    elif size == "small":
+        app.icon_small = new_image_id
+    db.session.commit()
+
+    return jsonify(success=True, id=new_image_id, size=size)
+
+
 
 @devportal_api.route('/wizard/rename/<developer_id>', methods=['POST'])
 def wizard_rename_developer(developer_id):
