@@ -528,8 +528,6 @@ def delete_banner(app_id, platform, banner_id):
         
 @devportal_api.route('/app/<app_id>/icons', methods=['GET'])
 def get_app_icons(app_id):
-    # Check app exists
-
     try:
         app = App.query.filter(App.id == app_id).one()
     except NoResultFound as e:
