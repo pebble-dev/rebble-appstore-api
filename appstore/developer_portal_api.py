@@ -581,7 +581,7 @@ def new_app_icon(app_id, size):
 
     # Check it's the correct size
     if not is_valid_image_size(new_image, f"{size}_icon"):
-        max_w, max_h = get_max_image_dimensions("icon")
+        max_w, max_h = get_max_image_dimensions(f"{size}_icon")
         return jsonify(error="Invalid image size", e="icon.illegaldimensions", message=f"Image should be {max_w}x{max_h}"), 400
         
     new_image_id = upload_asset(new_image, new_image.content_type)
