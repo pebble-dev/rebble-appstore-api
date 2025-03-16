@@ -123,7 +123,9 @@ class PBW(object):
         return self.header
 
     def is_generated(self):
-        return str(self.get_app_metadata()["uuid"]).startswith(GENERATED_ID_PREFIX)
+        with self.zip.open('appinfo.json') as f:
+            appinfo = json.load(f)
+            return str(appinfo["uuid"]).startswith(GENERATED_ID_PREFIX)
 
     def close(self):
         self.zip.close()
