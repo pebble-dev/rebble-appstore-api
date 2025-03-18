@@ -291,7 +291,7 @@ def submit_new_release(app_id):
     uuid = appinfo['uuid']
     version = appinfo['versionLabel']
         
-    if uuid != app.app_uuid:
+    if str(uuid) != str(app.app_uuid):
         return jsonify(error="The UUID in appinfo.json does not match the app you are trying to update", e="uuid.mismatch"), 400
 
     release_old = Release.query.filter_by(app=app).order_by(Release.published_date.desc()).first()
