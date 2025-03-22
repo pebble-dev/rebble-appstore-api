@@ -143,6 +143,13 @@ def submit_new_app():
                 if f"screenshot-{platform}-{x}" in request.files:
                     screenshots[platform].append(request.files[f"screenshot-{platform}-{x}"])
 
+        for platform in appinfo["targetPlatforms"]:
+            if platform not in screenshots or len(screenshots[platform]) == 0:
+                return jsonify(
+                    error=f"A screenshot was not provided for supported platform: {platform}",
+                    e="screenshot.missing"
+                ), 400
+
         # Remove any platforms with no screenshots
         screenshots = {k: v for k, v in screenshots.items() if v}
         app_obj = App(
