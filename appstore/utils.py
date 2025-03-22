@@ -344,13 +344,6 @@ def validate_new_app_fields(request):
         "category"
     ]
 
-    screenshot_platforms = [
-        "aplite",
-        "basalt",
-        "chalk",
-        "diorite",
-    ]
-
     permitted_sub_types = [
         "watchface",
         "watchapp"
@@ -407,7 +400,7 @@ def validate_new_app_fields(request):
     # Here we also validate it's an image file and it's the correct dimenisions
 
     at_least_one_screenshot = False
-    for platform in screenshot_platforms:
+    for platform in valid_platforms:
         for x in range(1, 6):
              if f"screenshot-{platform}-{x}" in request.files:
                 imgtype = imghdr.what(request.files[f"screenshot-{platform}-{x}"])
@@ -496,6 +489,9 @@ def get_max_image_dimensions(resource_type):
     elif resource_type == "screenshot_chalk":
         max_w = 180
         max_h = 180
+    elif resource_type == "screenshot_emery":
+        max_w = 200
+        max_h = 228
     elif resource_type == "large_icon":
         max_w = 144
         max_h = 144
