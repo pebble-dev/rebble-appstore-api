@@ -86,7 +86,8 @@ def submit_new_app():
             "aplite": [],
             "basalt": [],
             "chalk": [],
-            "diorite": []
+            "diorite": [],
+            "emery": [],
         }
 
         try:
@@ -298,7 +299,7 @@ def submit_new_release(app_id):
 
     uuid = appinfo['uuid']
     version = appinfo['versionLabel']
-        
+
     if str(uuid) != str(app.app_uuid):
         return jsonify(error="The UUID in appinfo.json does not match the app you are trying to update", e="uuid.mismatch"), 400
 
