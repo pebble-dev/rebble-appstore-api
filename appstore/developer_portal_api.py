@@ -86,7 +86,8 @@ def submit_new_app():
             "aplite": [],
             "basalt": [],
             "chalk": [],
-            "diorite": []
+            "diorite": [],
+            "emery": [],
         }
 
         try:
@@ -141,6 +142,13 @@ def submit_new_app():
             for x in range(1,6):
                 if f"screenshot-{platform}-{x}" in request.files:
                     screenshots[platform].append(request.files[f"screenshot-{platform}-{x}"])
+
+        for platform in appinfo["targetPlatforms"]:
+            if platform not in screenshots or len(screenshots[platform]) == 0:
+                return jsonify(
+                    error=f"A screenshot was not provided for supported platform: {platform}",
+                    e="screenshot.missing"
+                ), 400
 
         # Remove any platforms with no screenshots
         screenshots = {k: v for k, v in screenshots.items() if v}
@@ -290,7 +298,7 @@ def submit_new_release(app_id):
 
     uuid = appinfo['uuid']
     version = appinfo['versionLabel']
-        
+
     if str(uuid) != str(app.app_uuid):
         return jsonify(error="The UUID in appinfo.json does not match the app you are trying to update", e="uuid.mismatch"), 400
 
