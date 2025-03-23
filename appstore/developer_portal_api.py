@@ -105,10 +105,9 @@ def submit_new_app():
         if not appinfo_valid:
             return jsonify(error=f"The appinfo.json in your pbw file has the following error: {appinfo_validation_error}", e="invalid.appinfocontent"), 400
         
-        if params["type"] == "watchface" and appinfo["watchapp"]["watchface"] == False:
+        if params["type"] == "watchface" and not appinfo["watchapp"]["watchface"]:
             return jsonify(error=f"You selected the app type 'Watchface'. This does not match the configuration in your appinfo.json", e="invalid.appinfocontent"), 400
-        
-        if params["type"] == "watchapp" and appinfo["watchapp"]["watchface"] == True:
+        elif params["type"] == "watchapp" and appinfo["watchapp"]["watchface"]:
             return jsonify(error=f"You selected the app type 'Watch App'. This does not match the configuration in your appinfo.json", e="invalid.appinfocontent"), 400
             
         # Check app doesn't already exist
@@ -537,8 +536,6 @@ def delete_banner(app_id, platform, banner_id):
         
 @devportal_api.route('/app/<app_id>/icons', methods=['GET'])
 def get_app_icons(app_id):
-    # Check app exists
-
     try:
         app = App.query.filter(App.id == app_id).one()
     except NoResultFound as e:
@@ -549,11 +546,9 @@ def get_app_icons(app_id):
 
 @devportal_api.route('/app/<app_id>/icon/<size>', methods=['GET'])
 def get_app_icon(app_id, size):
-
-    if not size in ["large","small"]:
+    if size not in ("large", "small"):
         return jsonify(error="Invalid icon size. Expected 'small' or 'large'.", e="size.invalid"), 404 
 
-    # Check app exist
     try:
         app = App.query.filter(App.id == app_id).one()
     except NoResultFound as e:
@@ -564,8 +559,7 @@ def get_app_icon(app_id, size):
 
 @devportal_api.route('/app/<app_id>/icon/<size>', methods=['POST'])
 def new_app_icon(app_id, size):
-
-    if not size in ["large","small"]:
+    if size not in ("large", "small"):
         return jsonify(error="Invalid icon size. Expected 'small' or 'large'.", e="size.invalid"), 404    
 
     try:
