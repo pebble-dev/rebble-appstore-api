@@ -522,4 +522,8 @@ def first_version_is_newer(current_release, old_release):
             # Current version is longer than old version. I.e. 1.2.1 vs 1.2
             # As long as it's not 0, current is newer
             return current != 0
+        except ValueError:
+            # The field is a string so it might not be a number
+            # In such a case we can't compare so just fail until they change it
+            return False
     return False
