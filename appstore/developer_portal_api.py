@@ -2,7 +2,7 @@ import json
 import traceback
 import datetime
 
-#from algoliasearch import algoliasearch
+from algoliasearch import algoliasearch
 from flask import Blueprint, jsonify, abort, request
 from flask_cors import CORS
 
