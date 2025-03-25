@@ -505,3 +505,21 @@ def who_am_i():
     result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
     me = result.json()
     return f'{me["name"]} ({me["uid"]})'
+
+def first_version_is_newer(current_release, old_release):
+    #1.11 is < 1.1 (mathmatically) so split up by . and check properly
+    sections_current = str(current_release).split(".")
+    sections_old = str(old_release).split(".")
+    for i in range(len(sections_current)):
+        try:
+            current = int(sections_current[i])
+            old = int(sections_old[i])
+            if current > old:
+                return True
+            elif old > current:
+                return False
+        except IndexError:
+            # Current version is longer than old version. I.e. 1.2.1 vs 1.2
+            # As long as it's not 0, current is newer
+            return current != 0
+    return False

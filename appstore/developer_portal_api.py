@@ -2,7 +2,7 @@ import json
 import traceback
 import datetime
 
-from algoliasearch import algoliasearch
+#from algoliasearch import algoliasearch
 from flask import Blueprint, jsonify, abort, request
 from flask_cors import CORS
 
@@ -12,7 +12,7 @@ from werkzeug.exceptions import BadRequest
 from sqlalchemy.exc import DataError
 from zipfile import BadZipFile
 
-from .utils import authed_request, demand_authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file, is_valid_image_size, get_max_image_dimensions, generate_image_url, is_users_developer_id, user_is_wizard, newAppValidationException, algolia_app
+from .utils import authed_request, demand_authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file, is_valid_image_size, get_max_image_dimensions, generate_image_url, is_users_developer_id, user_is_wizard, newAppValidationException, algolia_app, first_version_is_newer
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
 from .pbw import PBW, release_from_pbw
 from .s3 import upload_pbw, upload_asset
@@ -304,7 +304,7 @@ def submit_new_release(app_id):
 
     release_old = Release.query.filter_by(app=app).order_by(Release.published_date.desc()).first()
 
-    if version <= release_old.version:
+    if not first_version_is_newer(version, release_old.version):
         return jsonify(
             error=f"The version ({version}) is already on the appstore", 
             e="version.exists", 
