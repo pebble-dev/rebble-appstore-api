@@ -1,6 +1,7 @@
 import json
 import traceback
 import datetime
+import secrets
 
 from algoliasearch import algoliasearch
 from flask import Blueprint, jsonify, abort, request
@@ -213,7 +214,8 @@ def update_app_fields(app_id):
             "category": str,
             "website": str,
             "source": str,
-            "visible": bool
+            "visible": bool,
+            "timeline_enabled": bool
         }
 
         # Check all valid passed fields are correct type
@@ -237,6 +239,8 @@ def update_app_fields(app_id):
             return jsonify(error="Invalid value for field: category", e="invalid.field.category"), 400
         if "visible" in req and not (req["visible"].lower() == "true" or req["visible"].lower() == "false"):
             return jsonify(error="Invalid value for field: visible", e="invalid.field.visible"), 400
+        if "timeline_enabled" in req and not (req["timeline_enabled"].lower() == "true" or req["timeline_enabled"].lower() == "false"):
+            return jsonify(error="Invalid value for field: timeline_enabled", e="invalid.field.timeline_enabled"), 400
 
         # Disallow change face category
         if "category" in req and app.category == "Faces":
@@ -245,7 +249,11 @@ def update_app_fields(app_id):
         # Check title length
         if "title" in req and len(req["title"]) > 45:
             return jsonify(error="Title must be less than 45 characters", e="invalid.field.title"), 400
-            
+
+        # Create a timeline token when enabling the timeline
+        if "timeline_enabled" in req:
+            req["timeline_token"] = secrets.token_urlsafe(32) if req["timeline_enabled"].lower() == "true" else ""
+
         # Update the app
         for x in req:
             setattr(app, x, req[x])
@@ -327,7 +335,21 @@ def submit_new_release(app_id):
         print("Discord is being weird")
 
     return jsonify(success=True)
-        
+
+@devportal_api.route('/app/<app_id>/timeline_token')
+def apps_by_token(app_id):
+    try:
+        app = App.query.filter(App.id == app_id).one()
+    except NoResultFound:
+        abort(404)
+        return
+
+    result = {
+        "timeline_token": app.timeline_token
+    }
+
+    return jsonify(result)
+
 # Screenshots 
 @devportal_api.route('/app/<app_id>/screenshots')
 def missing_platform(app_id):
