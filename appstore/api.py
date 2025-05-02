@@ -105,6 +105,27 @@ def apps_by_collection(collection, app_type):
     return generate_app_response(apps, sort_override=sort_override)
 
 
+@api.route('/apps/by_token/<timeline_token>')
+def apps_by_token(timeline_token):
+    secret = get_access_token()
+    if secret != config['SECRET_KEY']:
+        abort(401)
+    if timeline_token == "":
+        abort(404)
+
+    try:
+        app = App.query.filter(App.timeline_token == timeline_token).one()
+    except NoResultFound:
+        abort(404)
+        return
+
+    result = {
+        "app_uuid": app.app_uuid
+    }
+
+    return jsonify(result)
+
+
 @api.route('/applications/<app_id>/changelog')
 def changelogs_by_id(app_id):
     try:
