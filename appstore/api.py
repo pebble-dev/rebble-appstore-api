@@ -6,8 +6,9 @@ from sqlalchemy import and_
 
 from sqlalchemy.orm.exc import NoResultFound
 
-from appstore.utils import jsonify_app, asset_fallback, generate_image_url
+from appstore.utils import jsonify_app, asset_fallback, generate_image_url, get_access_token
 from .models import App, Collection, HomeBanners, Category, db, Release
+from .settings import config
 
 parent_app = None
 api = Blueprint('api', __name__)
@@ -112,6 +113,27 @@ def apps_by_collection(collection, app_type):
     else:
         apps = Collection.query.filter_by(collection=collection).apps.filter_by(type=app_type).filter(global_filter(hw))
     return generate_app_response(apps, sort_override=sort_override)
+
+
+@api.route('/apps/by_token/<timeline_token>')
+def apps_by_token(timeline_token):
+    secret = get_access_token()
+    if secret != config['SECRET_KEY']:
+        abort(401)
+    if timeline_token == "":
+        abort(404)
+
+    try:
+        app = App.query.filter(App.timeline_token == timeline_token).one()
+    except NoResultFound:
+        abort(404)
+        return
+
+    result = {
+        "app_uuid": app.app_uuid
+    }
+
+    return jsonify(result)
 
 
 @api.route('/applications/<app_id>/changelog')
