@@ -1,6 +1,7 @@
 import json
 import traceback
 import datetime
+import secrets
 
 from algoliasearch import algoliasearch
 from flask import Blueprint, jsonify, abort, request
@@ -152,8 +153,10 @@ def submit_new_app():
                 ), 400
 
         app_is_timeline_enabled = False
+        timeline_token = None
         if 'timeline_enabled' in params and params['timeline_enabled'] == 'true':
             app_is_timeline_enabled = True
+            timeline_token = secrets.token_urlsafe(32)
 
         # Remove any platforms with no screenshots
         screenshots = {k: v for k, v in screenshots.items() if v}
@@ -179,6 +182,7 @@ def submit_new_app():
             title=params['title'],
             type=params['type'],
             timeline_enabled=app_is_timeline_enabled,
+            timeline_token=timeline_token,
             website=params['website'] if 'website' in params else "",
         )
         db.session.add(app_obj)
@@ -218,12 +222,14 @@ def update_app_fields(app_id):
             "category": str,
             "website": str,
             "source": str,
-            "visible": bool
+            "visible": bool,
+            "timeline_enabled": bool,
+            "timeline_token": None
         }
 
         # Check all valid passed fields are correct type
         for x in req:
-            if (x in allowed_fields_type_map) and (not type(x) == allowed_fields_type_map[x]):
+            if (x in allowed_fields_type_map) and (not type(req[x]) == allowed_fields_type_map[x]):
                 return jsonify(error=f"Invalid value for field '{x}'", e=f"invalid.field.{x}"), 400
 
 
@@ -240,8 +246,6 @@ def update_app_fields(app_id):
         # Check any enum fields
         if "category" in req and not is_valid_category(req["category"]):
             return jsonify(error="Invalid value for field: category", e="invalid.field.category"), 400
-        if "visible" in req and not (req["visible"].lower() == "true" or req["visible"].lower() == "false"):
-            return jsonify(error="Invalid value for field: visible", e="invalid.field.visible"), 400
 
         # Disallow change face category
         if "category" in req and app.category == "Faces":
@@ -250,7 +254,14 @@ def update_app_fields(app_id):
         # Check title length
         if "title" in req and len(req["title"]) > 45:
             return jsonify(error="Title must be less than 45 characters", e="invalid.field.title"), 400
-            
+
+        # Create a timeline token when enabling the timeline
+        if "timeline_enabled" in req:
+            if not req["timeline_enabled"]:
+                req["timeline_token"] = None
+            elif app.timeline_token == None:
+                req["timeline_token"] = secrets.token_urlsafe(32)
+
         # Update the app
         for x in req:
             setattr(app, x, req[x])
@@ -332,7 +343,25 @@ def submit_new_release(app_id):
         print("Discord is being weird")
 
     return jsonify(success=True)
-        
+
+@devportal_api.route('/app/<app_id>/timeline_token')
+def apps_timeline_token(app_id):
+    try:
+        app = App.query.filter(App.id == app_id).one()
+    except NoResultFound:
+        abort(404)
+        return
+
+    # Check we own the app
+    if not is_users_developer_id(app.developer_id):
+        return jsonify(error="You do not have permission to access the token", e="permission.denied"), 403
+
+    result = {
+        "timeline_token": app.timeline_token
+    }
+
+    return jsonify(result)
+
 # Screenshots 
 @devportal_api.route('/app/<app_id>/screenshots')
 def missing_platform(app_id):
