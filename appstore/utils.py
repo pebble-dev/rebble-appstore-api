@@ -513,7 +513,10 @@ def first_version_is_newer(current_release, old_release):
     for i in range(len(sections_current)):
         try:
             current = int(sections_current[i])
-            old = int(sections_old[i])
+            # Some apps updated manually via Rebble have the "-rbl" suffix, e.g. "1.0-rbl"
+            # We have to remove the suffix here otherwise the comparison always fail
+            old_numeric_part = sections_old[i].split("-")[0]
+            old = int(old_numeric_part)
             if current > old:
                 return True
             elif old > current:
