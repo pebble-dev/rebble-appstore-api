@@ -12,6 +12,8 @@ class Developer(db.Model):
     __tablename__ = "developers"
     id = db.Column(db.String(24), primary_key=True)
     name = db.Column(db.String)
+    deploy_key = db.Column(db.String)
+    deploy_key_last_used = db.Column(db.DateTime)
 
 
 class HomeBanners(db.Model):
@@ -126,7 +128,7 @@ class Release(db.Model):
     app = db.relationship('App', back_populates='releases')
     binaries = db.relationship('Binary',
                                back_populates='release',
-                               collection_class=attribute_mapped_collection('platform'),
+                               collection_class=attribute_mapped_collection('platform', ignore_unpopulated_attribute=True),
                                lazy='selectin')
     has_pbw = db.Column(db.Boolean())
     capabilities = db.Column(ARRAY(db.String))

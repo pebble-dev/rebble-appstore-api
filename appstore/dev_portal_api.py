@@ -1,4 +1,4 @@
-from algoliasearch import algoliasearch
+#from algoliasearch import algoliasearch
 from flask import Blueprint, jsonify, abort, request
 from flask_cors import CORS
 from werkzeug.exceptions import BadRequest
@@ -67,6 +67,8 @@ def my_apps():
             'authName': me["name"],
             'applications': [],
             'needsSetup': True,
+            'hasDeployKey': False,
+            'deployKeyLastUsed': 0,
             'w': me["is_wizard"],
         })
     else:
@@ -77,6 +79,8 @@ def my_apps():
                 'authName': me["name"],
                 'applications': my_appdata,
                 'name': developer.name,
+                'hasDeployKey': developer.deploy_key is not None,
+                'deployKeyLastUsed': developer.deploy_key_last_used if developer.deploy_key_last_used is not None else 0,
                 'needsSetup': False,
                 'w': me["is_wizard"],
         })
