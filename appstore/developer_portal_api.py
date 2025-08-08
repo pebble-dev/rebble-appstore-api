@@ -150,6 +150,10 @@ def submit_new_app():
                     e="screenshot.missing"
                 ), 400
 
+        app_is_timeline_enabled = False
+        if 'timeline_enabled' in params and params['timeline_enabled'] == 'true':
+            app_is_timeline_enabled = True
+
         # Remove any platforms with no screenshots
         screenshots = {k: v for k, v in screenshots.items() if v}
         app_obj = App(
@@ -173,7 +177,7 @@ def submit_new_app():
             source=params['source'] if 'source' in params else "",
             title=params['title'],
             type=params['type'],
-            timeline_enabled=params['timeline_enabled'] if "timeline_enabled" in params else False,
+            timeline_enabled=app_is_timeline_enabled,
             website=params['website'] if 'website' in params else "",
         )
         db.session.add(app_obj)
