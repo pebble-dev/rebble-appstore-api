@@ -173,7 +173,7 @@ def submit_new_app():
             source=params['source'] if 'source' in params else "",
             title=params['title'],
             type=params['type'],
-            timeline_enabled=False,
+            timeline_enabled=params['timeline_enabled'] if "timeline_enabled" in params else False,
             website=params['website'] if 'website' in params else "",
         )
         db.session.add(app_obj)
