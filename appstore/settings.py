@@ -25,4 +25,5 @@ config = {
     'AWS_ACCESS_KEY': os.environ.get('AWS_ACCESS_KEY', None),
     'AWS_SECRET_KEY': os.environ.get('AWS_SECRET_KEY', None),
     'S3_ENDPOINT': os.environ.get('S3_ENDPOINT', None),
+    'TEST_APP_UUID': os.environ.get('TEST_APP_UUID', None),
 }
