@@ -692,7 +692,7 @@ def wizard_delete_app(app_id):
 
     App.query.filter(App.id == app_id).delete()
 
-    audit_log(f'Deleted app \'{app.title}\' ({app.id})')
+    audit_log(f'Deleted app \'{app.title}\' ({app.id})', app.app_uuid)
 
     db.session.commit()
 

@@ -12,6 +12,10 @@ def random_party_emoji():
     return random.choice(party_time_emoji)
 
 def announce_release(app, release, is_generated):
+
+        if config["TEST_APP_UUID"] is not None and config["TEST_APP_UUID"] == str(app.uuid):
+            return
+
         release_notes = release.release_notes
         if not release_notes:
             release_notes = "N/A"
@@ -38,6 +42,10 @@ def announce_release(app, release, is_generated):
         send_discord_webhook(request_data, is_generated)
 
 def announce_new_app(app, is_generated):
+
+    if config["TEST_APP_UUID"] is not None and config["TEST_APP_UUID"] == str(app.uuid):
+        return
+
     request_fields = [{
              "name": "Name",
              "value": app.title
@@ -88,7 +96,12 @@ def announce_new_app(app, is_generated):
     
     send_discord_webhook(request_data, is_generated)
 
-def audit_log(operation):
+def audit_log(operation, affected_app_uuid = None):
+
+    if affected_app_uuid is not None:
+        if config["TEST_APP_UUID"] is not None and config["TEST_APP_UUID"] == str(affected_app_uuid):
+            return
+
     request_fields = [{
              "name": "Who?",
              "value": who_am_i()
