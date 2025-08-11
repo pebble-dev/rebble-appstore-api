@@ -761,8 +761,10 @@ def deploy_key():
 
 @devportal_api.route('/deploy', methods=['POST'])
 def submit_new_release_via_deploy():
+    # Todo: Merge this with the publish release endpoint
+
     if not request.headers.get("x-deploy-key"):
-        return jsonify(error="No x-deploy-key header found", e="permission.denied"), 403
+        return jsonify(error="No X-Deploy-Key header found", e="permission.denied"), 401
 
     data = dict(request.form)
 
