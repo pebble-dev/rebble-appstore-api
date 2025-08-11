@@ -22,4 +22,4 @@ def upgrade():
 
 def downgrade():
     op.drop_column('developers', 'deploy_key')
-    # op.drop_column('developers', 'deploy_key_last_used')
+    op.drop_column('developers', 'deploy_key_last_used')
