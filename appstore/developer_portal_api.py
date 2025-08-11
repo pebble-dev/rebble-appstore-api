@@ -8,7 +8,7 @@ from flask import Blueprint, jsonify, abort, request
 from flask_cors import CORS
 
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from werkzeug.exceptions import BadRequest
 from sqlalchemy.exc import DataError
 from zipfile import BadZipFile
@@ -795,7 +795,9 @@ def submit_new_release_via_deploy():
     try:
         app = App.query.filter(App.app_uuid == uuid).one()
     except NoResultFound:
-        return jsonify(error="Unknown app", e="app.notfound"), 400
+        return jsonify(error="Unknown app. To submit a new app to the appstore for the first time, please use dev-portal.rebble.io", e="app.notfound"), 400
+    except MultipleResultsFound:
+        return jsonify(error="You cannot use deploy keys with this app. You must submit a release manually through dev-portal.rebble.io", e="app.noteligible"), 400
 
     # Check we own the app
     if not is_valid_deploy_key_for_app(request.headers.get("x-deploy-key"), app):
