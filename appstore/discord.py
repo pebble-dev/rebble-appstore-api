@@ -13,7 +13,7 @@ def random_party_emoji():
 
 def announce_release(app, release, is_generated):
 
-        if config["TEST_APP_UUID"] is not None and config["TEST_APP_UUID"] == str(app.uuid):
+        if config["TEST_APP_UUID"] is not None and config["TEST_APP_UUID"] == str(app.app_uuid):
             return
 
         release_notes = release.release_notes
@@ -43,7 +43,7 @@ def announce_release(app, release, is_generated):
 
 def announce_new_app(app, is_generated):
 
-    if config["TEST_APP_UUID"] is not None and config["TEST_APP_UUID"] == str(app.uuid):
+    if config["TEST_APP_UUID"] is not None and config["TEST_APP_UUID"] == str(app.app_uuid):
         return
 
     request_fields = [{
