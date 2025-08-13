@@ -106,7 +106,11 @@ def update_my_developer():
     me = result.json()
     developer_id = me["id"]
 
-    developer = Developer.query.filter_by(id=developer_id).one()
+    try:
+        developer = Developer.query.filter_by(id=developer_id).one()
+    except NoResultFound:
+        return jsonify(success=False, e="developer.inactive", error="Your developer account is not configured. Please visit dev-portal.rebble.io/setup to perform inital setup."), 409
+
     print("Update developer from " + developer.name + " to " + req["name"])
     developer.name = req["name"]
     db.session.commit()
