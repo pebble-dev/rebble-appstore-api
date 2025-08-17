@@ -21,7 +21,7 @@ SQLAlchemy==1.2.8
 urllib3==1.23
 Werkzeug==0.16.1
 boto3==1.9.169
-PyYAML==5.1.2
+PyYAML==5.4
 Pillow==8.4
 
 # for serving
