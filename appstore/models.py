@@ -126,7 +126,7 @@ class Release(db.Model):
     app = db.relationship('App', back_populates='releases')
     binaries = db.relationship('Binary',
                                back_populates='release',
-                               collection_class=attribute_mapped_collection('platform'),
+                               collection_class=attribute_mapped_collection('platform', ignore_unpopulated_attribute=True),
                                lazy='selectin')
     has_pbw = db.Column(db.Boolean())
     capabilities = db.Column(ARRAY(db.String))
@@ -167,6 +167,13 @@ class UserLike(db.Model):
     app_id = db.Column(db.String(24), db.ForeignKey('apps.id', ondelete='cascade'), primary_key=True, index=True)
     app = db.relationship('App')
 db.Index('user_like_app_user_index', UserLike.app_id, UserLike.user_id, unique=True)
+
+class UserFlag(db.Model):
+    __tablename__ = "user_flags"
+    user_id = db.Column(db.Integer(), primary_key=True, index=True)
+    app_id = db.Column(db.String(24), db.ForeignKey('apps.id', ondelete='cascade'), primary_key=True, index=True)
+    app = db.relationship('App')
+db.Index('user_flag_app_user_index', UserFlag.app_id, UserFlag.user_id, unique=True)
 
 def init_app(app):
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False

@@ -6,7 +6,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
 from .utils import authed_request, demand_authed_request, get_uid
-from .models import LockerEntry, UserLike, db, App, Developer
+from .models import LockerEntry, UserLike, db, App, Developer, UserFlag
+from .discord import report_app_flag
 from .settings import config
 
 parent_app = None
@@ -27,13 +28,14 @@ def me():
     rebble_id = me['rebble_id']
     added_ids = [x.app_id for x in LockerEntry.query.filter_by(user_id=rebble_id)]
     voted_ids = [x.app_id for x in UserLike.query.filter_by(user_id=rebble_id)]
+    flagged_ids = [x.app_id for x in UserFlag.query.filter_by(user_id=rebble_id)]
     return jsonify({
         'users': [{
             'id': me['id'],
             'uid': me['uid'],
             'added_ids': added_ids,
             'voted_ids': voted_ids,
-            'flagged_ids': [],
+            'flagged_ids': flagged_ids,
             'applications': [],
             'name': me['name'],
             'href': request.url,
@@ -146,6 +148,35 @@ def remove_heart(app_id):
     db.session.commit()
     if algolia_index:
         algolia_index.partial_update_object({'objectID': app_id, 'hearts': app.hearts}, no_create=True)
+    return 'ok'
+
+@legacy_api.route('/applications/<app_id>/add_flag', methods=['POST'])
+def add_flag(app_id):
+    uid = get_uid()
+
+    try:
+        app = App.query.filter_by(id=app_id).one()
+        flag = UserFlag(user_id=uid, app_id=app_id)
+        db.session.add(flag)
+        db.session.commit()
+        report_app_flag(app.title, app.developer.name, app_id, app.app_uuid)
+    except NoResultFound:
+        abort(404)
+        return
+    except IntegrityError:
+        return jsonify(error="already flagged",e="flag.exists"), 400
+    return 'ok'
+
+
+@legacy_api.route('/applications/<app_id>/remove_flag', methods=['POST'])
+def remove_flag(app_id):
+    uid = get_uid()
+    try:
+        flag = UserFlag.query.filter_by(app_id=app_id, user_id=uid).one()
+    except NoResultFound:
+        return ''
+    db.session.delete(flag)
+    db.session.commit()
     return 'ok'
 
 
