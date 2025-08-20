@@ -126,7 +126,7 @@ class Release(db.Model):
     app = db.relationship('App', back_populates='releases')
     binaries = db.relationship('Binary',
                                back_populates='release',
-                               collection_class=attribute_mapped_collection('platform', ignore_unpopulated_attribute=True),
+                               collection_class=attribute_mapped_collection('platform'),
                                lazy='selectin')
     has_pbw = db.Column(db.Boolean())
     capabilities = db.Column(ARRAY(db.String))
