@@ -1,6 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from sqlalchemy import Table
+from sqlalchemy import Table, desc
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm.collections import attribute_mapped_collection
 
@@ -65,7 +65,7 @@ class App(db.Model):
     developer_id = db.Column(db.String(24), db.ForeignKey('developers.id'))
     developer = db.relationship('Developer', lazy='joined')
     hearts = db.Column(db.Integer, index=True)
-    releases = db.relationship('Release', order_by=lambda: Release.published_date, back_populates='app', lazy='selectin')
+    releases = db.relationship('Release', order_by=lambda: desc(Release.published_date), back_populates='app', lazy='selectin')
     icon_large = db.Column(db.String)
     icon_small = db.Column(db.String)
     published_date = db.Column(db.DateTime)
