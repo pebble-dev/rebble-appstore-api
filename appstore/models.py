@@ -168,6 +168,13 @@ class UserLike(db.Model):
     app = db.relationship('App')
 db.Index('user_like_app_user_index', UserLike.app_id, UserLike.user_id, unique=True)
 
+class UserFlag(db.Model):
+    __tablename__ = "user_flags"
+    user_id = db.Column(db.Integer(), primary_key=True, index=True)
+    app_id = db.Column(db.String(24), db.ForeignKey('apps.id', ondelete='cascade'), primary_key=True, index=True)
+    app = db.relationship('App')
+db.Index('user_flag_app_user_index', UserFlag.app_id, UserFlag.user_id, unique=True)
+
 def init_app(app):
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)

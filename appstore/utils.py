@@ -136,8 +136,8 @@ def jsonify_app(app: App, target_hw: str) -> dict:
             'share': f"{config['APPSTORE_ROOT']}/application/{app.id}",
             'add': 'https://a',
             'remove': 'https://b',
-            'add_flag': 'https://c',
-            'remove_flag': 'https://d',
+            'add_flag': url_for('legacy_api.add_flag', app_id=app.id, _external=True),
+            'remove_flag': url_for('legacy_api.remove_flag', app_id=app.id, _external=True),
         },
         'list_image': {
             '80x80': generate_image_url(app.icon_large, 80, 80, True),
@@ -209,6 +209,8 @@ def asset_fallback(collections: Dict[str, AssetCollection], target_hw='basalt') 
     # and given that, produce the sanest possible result.
     # In particular, monochrome devices have colour fallbacks to reduce the chance of
     # ending up with round screenshots.
+    # 13 Aug 25 - WM - Apparently we are getting a lot of requests with 'unknown' as the target_hw.
+    # Anyone failing to identify will be presumed to be diorite.
     fallbacks = {
         'aplite': ['aplite', 'diorite', 'basalt'],
         'basalt': ['basalt', 'aplite'],
@@ -216,7 +218,7 @@ def asset_fallback(collections: Dict[str, AssetCollection], target_hw='basalt') 
         'diorite': ['diorite', 'aplite', 'basalt'],
         'emery': ['emery', 'basalt', 'diorite', 'aplite']
     }
-    fallback = fallbacks[target_hw]
+    fallback = fallbacks[target_hw] if target_hw in fallbacks else fallbacks['diorite']
     for hw in fallback:
         if hw in collections:
             return collections[hw]

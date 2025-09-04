@@ -93,7 +93,7 @@ def announce_new_app(app, is_generated):
             "fields": request_fields
         }]
     }
-    
+
     send_discord_webhook(request_data, is_generated)
 
 def audit_log(operation, affected_app_uuid = None):
@@ -127,6 +127,39 @@ def audit_log(operation, affected_app_uuid = None):
 
     send_admin_discord_webhook(request_data)
 
+def report_app_flag(app_name, developer_name, app_id, affected_app_uuid = None):
+
+    if affected_app_uuid is not None:
+        if config["TEST_APP_UUID"] is not None and config["TEST_APP_UUID"] == str(affected_app_uuid):
+            return
+
+    request_fields = [{
+             "name": "App",
+             "value": app_name
+         },
+         {
+             "name": "Developer",
+             "value": developer_name
+         }
+     ]
+
+    request_data = {
+        "embeds": [{
+            "title": f"New Flagged App Report 🚩",
+            "color": int("0xFF4745", 0),
+            "description": f"An end user has reported an app on the appstore from within a mobile app.",
+            "thumbnail": {
+                "url": "https://i.imgur.com/5f6rGQ9.png",
+                "height": 80,
+                "width": 80
+            },
+            "url": f"{config['APPSTORE_ROOT']}/application/{app_id}",
+            "fields": request_fields
+        }]
+    }
+
+    send_admin_discord_webhook(request_data)
+
 def send_discord_webhook(request_data, is_generated = False):
     if not is_generated:
         if config['DISCORD_HOOK_URL'] is not None:
@@ -135,7 +168,7 @@ def send_discord_webhook(request_data, is_generated = False):
     else:
         if config['DISCORD_GENERATED_HOOK_URL'] is not None:
             headers = {'Content-Type': 'application/json'}
-            requests.post(config['DISCORD_GENERATED_HOOK_URL'], data=json.dumps(request_data), headers=headers)            
+            requests.post(config['DISCORD_GENERATED_HOOK_URL'], data=json.dumps(request_data), headers=headers)
 
 def send_admin_discord_webhook(request_data):
     if config['DISCORD_ADMIN_HOOK_URL'] is not None:
