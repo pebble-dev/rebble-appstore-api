@@ -12,6 +12,8 @@ class Developer(db.Model):
     __tablename__ = "developers"
     id = db.Column(db.String(24), primary_key=True)
     name = db.Column(db.String)
+    deploy_key = db.Column(db.String)
+    deploy_key_last_used = db.Column(db.DateTime)
 
 
 class HomeBanners(db.Model):
