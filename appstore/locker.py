@@ -13,7 +13,7 @@ from .utils import get_uid, generate_pbw_url, asset_fallback, generate_image_url
 
 def jsonify_locker_app(entry):
     app = entry.app
-    release = app.releases[-1] if len(app.releases) > 0 else None  # type: Release
+    release = app.releases[0] if len(app.releases) > 0 else None  # type: Release
     assets = app.asset_collections
     is_watchface = app.type == "watchface"
 

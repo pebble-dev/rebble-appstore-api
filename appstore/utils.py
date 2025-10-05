@@ -67,7 +67,7 @@ def init_app(app):
 
 
 def _jsonify_common(app: App, target_hw: str) -> dict:
-    release = app.releases[-1] if len(app.releases) > 0 else None
+    release = app.releases[0] if len(app.releases) > 0 else None
     assets = asset_fallback(app.asset_collections, target_hw)
 
     result = {
@@ -109,7 +109,7 @@ def _jsonify_common(app: App, target_hw: str) -> dict:
 
 
 def jsonify_app(app: App, target_hw: str) -> dict:
-    release = app.releases[-1] if len(app.releases) > 0 else None
+    release = app.releases[0] if len(app.releases) > 0 else None
     assets = asset_fallback(app.asset_collections, target_hw)
 
     result = _jsonify_common(app, target_hw)
@@ -165,7 +165,7 @@ def jsonify_app(app: App, target_hw: str) -> dict:
 
 def algolia_app(app: App) -> dict:
     assets = asset_fallback(app.asset_collections, 'aplite')
-    release = app.releases[-1] if len(app.releases) > 0 else None
+    release = app.releases[0] if len(app.releases) > 0 else None
 
     tags = [app.type]
     if release:
