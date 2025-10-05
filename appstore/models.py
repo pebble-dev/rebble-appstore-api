@@ -60,7 +60,8 @@ class App(db.Model):
     collections = db.relationship('Collection',
                                   back_populates='apps',
                                   secondary=collection_apps,
-                                  passive_deletes=True)
+                                  passive_deletes=True,
+                                  lazy='selectin')
     created_at = db.Column(db.DateTime)
     developer_id = db.Column(db.String(24), db.ForeignKey('developers.id'))
     developer = db.relationship('Developer', lazy='joined')

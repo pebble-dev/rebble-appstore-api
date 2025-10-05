@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+import io
 import json
 import yaml
 
@@ -19,9 +20,9 @@ from sqlalchemy.orm.exc import NoResultFound
 from algoliasearch import algoliasearch
 
 from .utils import id_generator, algolia_app
-from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
+from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike, Collection
 from .pbw import PBW, release_from_pbw
-from .s3 import upload_pbw, upload_asset
+from .s3 import upload_pbw, upload_asset, download_pbw, download_asset
 from .settings import config
 
 if config['ALGOLIA_ADMIN_API_KEY']:
@@ -578,6 +579,176 @@ def update_app(appid, conf):
         else:
             algolia_index.delete_objects([app_obj.id])
 
+def export_archive_to_zip(fn, test_only=False):
+    # test-only: only output a few files, so you can run this without a fast
+    # connection to gcs
+    assets = set()
+    binaries = set()
+    
+    def _mk_release(rel):
+        binaries.add(rel.id)
+
+        return {
+            'has_pbw': rel.has_pbw,
+            'binaries': { plat: {
+                'sdk_major': b.sdk_major,
+                'sdk_minor': b.sdk_minor,
+                'process_info_flags': b.process_info_flags,
+                'icon_resource_id': b.icon_resource_id,
+            } for plat,b in rel.binaries.items() },
+            'capabilities': rel.capabilities,
+            'js_md5': rel.js_md5,
+            'published_date': rel.published_date.timestamp() if rel.published_date else None,
+            'release_notes': rel.release_notes,
+            'version': rel.version,
+            'compatibility': rel.compatibility,
+        }
+    
+    def _mk_asset_collection(ass):
+        for img in ass.headers:
+            assets.add(img)
+        assets.add(ass.banner)
+
+        return {
+            'description': ass.description,
+            'screenshots': ass.screenshots,
+            'headers': ass.headers,
+            'banner': ass.banner,
+        }
+    
+    def _mk_app(app):
+        if _mk_app.n % 1000 == 0:
+            print(f"... {_mk_app.n} / {_mk_app.ntotal} ...")
+        _mk_app.n += 1
+        assets.add(app.icon_large)
+        assets.add(app.icon_small)
+        return {
+            'uuid': app.app_uuid,
+            'asset_collections': { plat: _mk_asset_collection(ass) for plat,ass in app.asset_collections.items() },
+            'category_id': app.category_id,
+            'companion_apps': { plat:
+                {
+                    'icon': c.icon,
+                    'url': c.url,
+                    'name': c.name,
+                    'pebblekit3': c.pebblekit3,
+                } for plat,c in app.companions.items() },
+            'collection_ids': [ c.id for c in app.collections ],
+            'created_at': app.created_at.timestamp() if app.created_at else None,
+            'developer_id': app.developer_id,
+            'hearts': app.hearts,
+            'releases': { rel.id: _mk_release(rel) for rel in app.releases if rel.is_published },
+            'icon_large': app.icon_large,
+            'icon_small': app.icon_small,
+            'published_date': app.published_date.timestamp() if app.published_date else None,
+            'source': app.source,
+            'title': app.title,
+            'timeline_enabled': app.timeline_enabled,
+            'type': app.type,
+            'website': app.website,
+        }
+    _mk_app.n = 0
+
+    with zipfile.ZipFile(fn, mode='w', compression=zipfile.ZIP_DEFLATED) as zf:
+        with zf.open("metadata/apps.json", 'w') as appsf:
+            print(f"Querying apps...")
+            _mk_app.ntotal = App.query.filter(App.visible == True).count()
+            apps = { app.id: _mk_app(app) for app in App.query.filter(App.visible == True).yield_per(1000) if app.visible }
+            print(f"Exporting apps.json...")
+            json.dump(apps, io.TextIOWrapper(appsf))
+        
+        with zf.open("metadata/categories.json", 'w') as categoriesf:
+            print(f"Exporting categories.json...")
+            categories = {
+                c.id: {
+                    'name': c.name,
+                    'slug': c.slug,
+                    'colour': c.colour,
+                    'icon': c.icon,
+                    'app_type': c.app_type,
+                    'banner_apps': [ app.id for app in c.banner_apps],
+                } for c in Category.query.filter(Category.is_visible == True)
+            }
+            json.dump(categories, io.TextIOWrapper(categoriesf))
+        
+        with zf.open("metadata/collections.json", 'w') as collectionsf:
+            print(f"Exporting collections.json...")
+            collections = {
+                c.id: {
+                    'name': c.name,
+                    'slug': c.slug,
+                    'app_type': c.app_type,
+                    'platforms': c.platforms,
+                } for c in Collection.query
+            }
+            json.dump(collections, io.TextIOWrapper(collectionsf))
+        
+        with zf.open("metadata/developers.json", 'w') as developersf:
+            print(f"Exporting developers.json...")
+            developers = {
+                d.id: d.name
+                for d in Developer.query
+            }
+            
+            # XXX: at some point it might be nice to also provide a Rebble
+            # user ID for a developer?  though I guess also developers who
+            # want to provide this to a user of the archive to verify
+            # themselves could just as well give a user oauth creds to
+            # verify their developer_id
+            json.dump(developers, io.TextIOWrapper(developersf))
+            
+        print(f"{len(assets)} assets to download")
+        n = 0
+        assets_failed = {}
+        for ass in assets:
+            if (n % 100) == 0:
+                print(f"... {n} / {len(assets)} ...")
+            n += 1
+            if ass == "":
+                continue
+            try:
+                if test_only and n > 50:
+                    raise TimeoutError()
+                with zf.open(f"assets/{ass[0]}/{ass[1]}/{ass}", 'w') as assf:
+                    download_asset(ass, assf)
+            except Exception as e:
+                assets_failed[ass] = repr(e)
+
+        print(f"{len(binaries)} binaries to download")
+        n = 0
+        binaries_failed = {}
+        for pbw in binaries:
+            if (n % 100) == 0:
+                print(f"... {n} / {len(binaries)} ...")
+            n += 1
+            if pbw == "":
+                continue
+            try:
+                if test_only and n > 50:
+                    raise TimeoutError()
+                with zf.open(f"binaries/{pbw[0]}/{pbw[1]}/{pbw}.pbw", 'w') as pbwf:
+                    download_pbw(pbw, pbwf)
+            except Exception as e:
+                binaries_failed[pbw] = repr(e)
+        
+        with zf.open("metadata/failed_downloads.json", "w") as failedf:
+            json.dump({ 'binaries_failed': binaries_failed, 'assets_failed': assets_failed }, io.TextIOWrapper(failedf))
+
+        with open(f"{os.path.dirname(__file__)}/ARCHIVE_LICENSE", "rb") as rf, zf.open("LICENSE.txt", "w") as wf:
+            wf.write(rf.read())
+
+@apps.command('export-archive')
+@click.option('--upload', is_flag=True)
+@click.option('--output')
+@click.option('--test', is_flag=True) # only dump 100 binaries of each type
+def export_archive(output, upload, test):
+    print(f"Preparing to export archive...")
+    if not output:
+        # ... mkstemp ...
+        pass
+    export_archive_to_zip(output, test_only=test)
+    # XXX: upload to s3
+    
 
 def init_app(app):
     app.cli.add_command(apps)

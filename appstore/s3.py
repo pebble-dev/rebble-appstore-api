@@ -58,6 +58,15 @@ def upload_pbw(release, file):
         file.seek(0)
         s3.upload_fileobj(file, config['S3_BUCKET'], filename, ExtraArgs = {'ContentType': 'application/zip'})   
 
+def download_pbw(id, file):
+    filename = f"{config['S3_PATH']}{id}.pbw"
+    s3 = session.client('s3', endpoint_url=s3_endpoint)
+    if isinstance(file, str):
+        s3.download_file(config['S3_BUCKET'], filename, file)
+    else:
+        s3.download_fileobj(config['S3_BUCKET'], filename, file)
+
+
 def upload_asset(file, mime_type = None):
     id = id_generator.generate()
     filename = f"{config['S3_ASSET_PATH']}{id}"
@@ -85,3 +94,11 @@ def upload_asset(file, mime_type = None):
         s3.upload_fileobj(file, config['S3_ASSET_BUCKET'], filename, ExtraArgs = {'ContentType': mime_type})
     
     return id    
+
+def download_asset(id, file):
+    filename = f"{config['S3_ASSET_PATH']}{id}"
+    s3 = session.client('s3', endpoint_url=s3_endpoint)
+    if isinstance(file, str):
+        s3.download_file(config['S3_ASSET_BUCKET'], filename, file)
+    else:
+        s3.download_fileobj(config['S3_ASSET_BUCKET'], filename, file)
