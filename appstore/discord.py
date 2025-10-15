@@ -127,7 +127,7 @@ def audit_log(operation, affected_app_uuid = None):
 
     send_admin_discord_webhook(request_data)
 
-def report_app_flag(app_name, developer_name, app_id, affected_app_uuid = None):
+def report_app_flag(reported_by, app_name, developer_name, app_id, affected_app_uuid = None):
 
     if affected_app_uuid is not None:
         if config["TEST_APP_UUID"] is not None and config["TEST_APP_UUID"] == str(affected_app_uuid):
@@ -140,6 +140,10 @@ def report_app_flag(app_name, developer_name, app_id, affected_app_uuid = None):
          {
              "name": "Developer",
              "value": developer_name
+         },
+         {
+             "name": "Reported By",
+             "value": "User #" + str(reported_by)
          }
      ]
 
