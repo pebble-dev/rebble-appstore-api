@@ -159,7 +159,7 @@ def add_flag(app_id):
         flag = UserFlag(user_id=uid, app_id=app_id)
         db.session.add(flag)
         db.session.commit()
-        report_app_flag(app.title, app.developer.name, app_id, app.app_uuid)
+        report_app_flag(uid, app.title, app.developer.name, app_id, app.app_uuid)
     except NoResultFound:
         abort(404)
         return
