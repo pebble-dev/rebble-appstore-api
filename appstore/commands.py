@@ -170,7 +170,7 @@ def import_apps(app_type):
         done = set()
         for platform in (app_obj.releases[0].compatibility
                          if len(app_obj.releases) > 0
-                         else ['aplite', 'basalt', 'chalk', 'diorite', 'emery']):
+                         else ['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint']):
             r = requests.get(f"https://api2.getpebble.com/v2/apps/id/{app_obj.id}?hardware={platform}")
             r.raise_for_status()
             data = r.json()['data'][0]
@@ -186,7 +186,7 @@ def import_apps(app_type):
             db.session.add(collection)
 
         if filename:
-            for platform in ['aplite', 'basalt', 'chalk', 'diorite', 'emery']:
+            for platform in ['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint']:
                 pbw = PBW(filename, platform)
                 if not pbw.has_platform:
                     continue
@@ -324,7 +324,7 @@ def import_app_from_locker(locker_app):
             is_published=True,
         )
         db.session.add(release_obj)
-        for platform in ['aplite', 'basalt', 'chalk', 'diorite', 'emery']:
+        for platform in ['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint']:
             pbw = PBW(filename, platform)
             if not pbw.has_platform:
                 continue
@@ -510,7 +510,7 @@ def new_app(conf):
                                release_notes = params['release_notes'],
                                published_date = datetime.datetime.utcnow(),
                                version = appinfo['versionLabel'],
-                               compatibility = appinfo.get('targetPlatforms', [ 'aplite', 'basalt', 'diorite', 'emery' ]))
+                               compatibility = appinfo.get('targetPlatforms', [ 'aplite', 'basalt', 'diorite', 'emery', 'flint' ]))
     print(f"Created release {release.id}")
     upload_pbw(release, path(pbw_file))
     db.session.commit()

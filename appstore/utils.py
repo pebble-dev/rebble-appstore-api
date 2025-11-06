@@ -44,6 +44,7 @@ plat_dimensions = {
     'chalk': (180, 180),
     'diorite': (144, 168),
     'emery': (200, 228),
+    'flint': (144, 168),
 }
 
 valid_platforms = [
@@ -51,7 +52,8 @@ valid_platforms = [
     "basalt",
     "chalk",
     "diorite",
-    "emery"
+    "emery",
+    "flint"
 ]
 
 permitted_image_types = [
@@ -85,9 +87,9 @@ def _jsonify_common(app: App, target_hw: str) -> dict:
             },
             **{
                 x: {
-                    'supported': x in (release.compatibility if release and release.compatibility else ['aplite', 'basalt', 'diorite', 'emery']),
+                    'supported': x in (release.compatibility if release and release.compatibility else ['aplite', 'basalt', 'diorite', 'emery', 'flint']),
                     'firmware': {'major': 3}
-                } for x in ['aplite', 'basalt', 'chalk', 'diorite', 'emery']
+                } for x in ['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint']
             },
         },
         'description': assets.description,
@@ -171,7 +173,7 @@ def algolia_app(app: App) -> dict:
     if release:
         tags.extend(release.compatibility or [])
     else:
-        tags.extend(['aplite', 'basalt', 'chalk', 'diorite', 'emery'])
+        tags.extend(['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint'])
         tags.append('companion-app')
     if len(app.companions) == 0:
         tags.extend(['android', 'ios'])
@@ -210,11 +212,12 @@ def asset_fallback(collections: Dict[str, AssetCollection], target_hw='basalt') 
     # In particular, monochrome devices have colour fallbacks to reduce the chance of
     # ending up with round screenshots.
     fallbacks = {
-        'aplite': ['aplite', 'diorite', 'basalt'],
+        'aplite': ['aplite', 'diorite', 'flint', 'basalt'],
         'basalt': ['basalt', 'aplite'],
         'chalk': ['chalk', 'basalt'],
-        'diorite': ['diorite', 'aplite', 'basalt'],
-        'emery': ['emery', 'basalt', 'diorite', 'aplite']
+        'diorite': ['diorite', 'flint', 'aplite', 'basalt'],
+        'emery': ['emery', 'basalt', 'diorite', 'aplite'],
+        'flint': ['flint', 'diorite', 'aplite', 'basalt']
     }
     fallback = fallbacks[target_hw]
     for hw in fallback:
