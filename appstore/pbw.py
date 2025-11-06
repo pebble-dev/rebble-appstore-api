@@ -12,7 +12,7 @@ import hashlib
 from .models import Binary, App, Release, db
 from .utils import id_generator
 
-PLATFORMS = ['aplite', 'basalt', 'chalk', 'diorite', 'emery']
+PLATFORMS = ['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint']
 GENERATED_ID_PREFIX = "13371337"
 
 class PBW(object):
@@ -42,6 +42,7 @@ class PBW(object):
         'chalk': ('chalk/',),
         'diorite': ('diorite/',),
         'emery': ('emery/',),
+        'flint': ('flint/',),
     }
 
     def __init__(self, pbw, platform):

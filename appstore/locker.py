@@ -60,9 +60,9 @@ def jsonify_locker_app(entry):
             },
             **{
                 x: {
-                    'supported': x in (release.compatibility if release and release.compatibility else ['aplite', 'basalt', 'diorite', 'emery']),
+                    'supported': x in (release.compatibility if release and release.compatibility else ['aplite', 'basalt', 'diorite', 'emery', 'flint']),
                     'firmware': {'major': 3}
-                } for x in ['aplite', 'basalt', 'chalk', 'diorite', 'emery']
+                } for x in ['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint']
             },
         },
         'companions': {

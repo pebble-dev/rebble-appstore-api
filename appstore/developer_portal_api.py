@@ -88,6 +88,7 @@ def submit_new_app():
             "chalk": [],
             "diorite": [],
             "emery": [],
+            "flint": [],
         }
 
         try:
@@ -187,7 +188,7 @@ def submit_new_app():
                                    release_notes=params['release_notes'],
                                    published_date=datetime.datetime.utcnow(),
                                    version=appinfo['versionLabel'],
-                                   compatibility=appinfo.get('targetPlatforms', ['aplite', 'basalt', 'diorite', 'emery']))
+                                   compatibility=appinfo.get('targetPlatforms', ['aplite', 'basalt', 'diorite', 'emery', 'flint']))
         print(f"Created release {release.id}")
         upload_pbw(release, request.files['pbw'])
         db.session.commit()
@@ -319,7 +320,7 @@ def submit_new_release(app_id):
                                    release_notes=data["release_notes"],
                                    published_date=datetime.datetime.utcnow(),
                                    version=version,
-                                   compatibility=appinfo.get('targetPlatforms', ['aplite', 'basalt', 'diorite', 'emery']))
+                                   compatibility=appinfo.get('targetPlatforms', ['aplite', 'basalt', 'diorite', 'emery', 'flint']))
 
     upload_pbw(release_new, request.files['pbw'])
     db.session.commit()
