@@ -15,7 +15,8 @@ from flask import request, abort, url_for
 import beeline
 
 from .settings import config
-from appstore.models import App, AssetCollection, CompanionApp
+from appstore.models import App, AssetCollection, CompanionApp, Developer
+from sqlalchemy.orm.exc import NoResultFound
 
 
 parent_app = None
@@ -464,6 +465,13 @@ def is_users_developer_id(developer_id):
         return False
     else:
         return True
+
+def is_valid_deploy_key_for_app(deploy_key, app_obj):
+    try:
+        dev = Developer.query.filter_by(deploy_key=deploy_key).one()
+        return app_obj.developer_id == dev.id
+    except NoResultFound:
+        return False
 
 def user_is_wizard():
     result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")

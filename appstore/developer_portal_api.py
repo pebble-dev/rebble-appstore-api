@@ -1,18 +1,19 @@
 import json
 import traceback
 import datetime
+import uuid
 
 from algoliasearch import algoliasearch
 from flask import Blueprint, jsonify, abort, request
 from flask_cors import CORS
 
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from werkzeug.exceptions import BadRequest
 from sqlalchemy.exc import DataError
 from zipfile import BadZipFile
 
-from .utils import authed_request, demand_authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file, is_valid_image_size, get_max_image_dimensions, generate_image_url, is_users_developer_id, user_is_wizard, newAppValidationException, algolia_app, first_version_is_newer
+from .utils import authed_request, demand_authed_request, get_uid, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file, is_valid_image_size, get_max_image_dimensions, generate_image_url, is_users_developer_id, user_is_wizard, newAppValidationException, algolia_app, first_version_is_newer, is_valid_deploy_key_for_app
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike
 from .pbw import PBW, release_from_pbw
 from .s3 import upload_pbw, upload_asset
@@ -678,7 +679,7 @@ def wizard_update_app(app_id):
     else:
         return jsonify(error="Invalid POST body. Provide one or more fields to update", e="body.invalid"), 400
 
-    
+
 @devportal_api.route('/wizard/app/<app_id>', methods=['DELETE'])
 def wizard_delete_app(app_id):
     if not user_is_wizard():
@@ -730,6 +731,106 @@ def wizard_get_s3_assets(app_id):
     pbws = list(dict.fromkeys(pbws))
 
     return jsonify(images = images, pbws = pbws)
+
+@devportal_api.route("/deploykey", methods=['POST'])
+def deploy_key():
+    try:
+       req = request.json
+    except BadRequest as e:
+        return jsonify(error="Invalid POST body. Expected JSON", e="body.invalid"), 400
+    if req is None:
+        return jsonify(error="Invalid POST body. Expected JSON", e="body.invalid"), 400
+
+    if not "operation" in req:
+        return jsonify(error="Missing required field: operation", e="missing.field.operation"), 400
+
+    if req["operation"] == "regenerate":
+
+        result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
+        me = result.json()
+
+        try:
+            developer = Developer.query.filter_by(id=me['id']).one()
+        except NoResultFound:
+            return jsonify(error="No developer account associated with user", e="setup.required"), 400
+
+        new_deploy_key = str(uuid.uuid4())
+        developer.deploy_key = new_deploy_key
+        developer.deploy_key_last_used = None
+        db.session.commit()
+
+        return jsonify(new_key=new_deploy_key)
+
+    else:
+        return jsonify(error="Unknown operation requested", e="operation.invalid"), 400
+
+@devportal_api.route('/deploy', methods=['POST'])
+def submit_new_release_via_deploy():
+    # Todo: Merge this with the publish release endpoint
+
+    if not request.headers.get("x-deploy-key"):
+        return jsonify(error="No X-Deploy-Key header found", e="permission.denied"), 401
+
+    data = dict(request.form)
+
+    if "pbw" not in request.files:
+        return jsonify(error="Missing file: pbw", e="pbw.missing"), 400
+
+    if "release_notes" not in data:
+        return jsonify(error="Missing field: release_notes", e="release_notes.missing"), 400
+
+    pbw_file = request.files['pbw'].read()
+
+    try:
+        pbw = PBW(pbw_file, 'aplite')
+        with pbw.zip.open('appinfo.json') as f:
+            appinfo = json.load(f)
+    except BadZipFile as e:
+        return jsonify(error=f"Your pbw file is invalid or corrupted", e="invalid.pbw"), 400
+    except KeyError as e:
+        return jsonify(error=f"Your pbw file is invalid or corrupted", e="invalid.pbw"), 400
+
+    appinfo_valid, appinfo_valid_reason = is_valid_appinfo(appinfo)
+    if not appinfo_valid:
+        return jsonify(error=f"The appinfo.json in your pbw file has the following error: {appinfo_valid_reason}", e="invalid.appinfocontent"), 400
+
+    uuid = appinfo['uuid']
+    version = appinfo['versionLabel']
+
+    try:
+        app = App.query.filter(App.app_uuid == uuid).one()
+    except NoResultFound:
+        return jsonify(error="Unknown app. To submit a new app to the appstore for the first time, please use dev-portal.rebble.io", e="app.notfound"), 400
+    except MultipleResultsFound:
+        return jsonify(error="You cannot use deploy keys with this app. You must submit a release manually through dev-portal.rebble.io", e="app.noteligible"), 400
+
+    # Check we own the app
+    if not is_valid_deploy_key_for_app(request.headers.get("x-deploy-key"), app):
+        return jsonify(error="You do not have permission to modify that app", e="permission.denied"), 403
+
+    # Update last used time
+    dev = Developer.query.filter_by(id=app.developer_id).one()
+    dev.deploy_key_last_used = datetime.datetime.now(datetime.timezone.utc)
+
+    release_old = Release.query.filter_by(app=app).order_by(Release.published_date.desc()).first()
+
+    if not first_version_is_newer(version, release_old.version):
+        return jsonify(
+            error=f"The version ({version}) is already on the appstore",
+            e="version.exists",
+            message="The app version in appinfo.json is not greater than the latest release on the store. Please increment versionLabel in your appinfo.json and try again."
+            ), 400
+
+    release_new = release_from_pbw(app, pbw_file,
+                                   release_notes=data["release_notes"],
+                                   published_date=datetime.datetime.utcnow(),
+                                   version=version,
+                                   compatibility=appinfo.get('targetPlatforms', ['aplite', 'basalt', 'diorite', 'emery']))
+
+    upload_pbw(release_new, request.files['pbw'])
+    db.session.commit()
+
+    return jsonify(success=True)
 
 
 def init_app(app, url_prefix='/api/dp'):
