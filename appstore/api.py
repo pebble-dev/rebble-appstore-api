@@ -13,6 +13,15 @@ parent_app = None
 api = Blueprint('api', __name__)
 CORS(api)
 
+HARDWARE_SUPPORT = {
+    'aplite': ['aplite'],
+    'basalt': ['basalt', 'aplite'],
+    'chalk': ['chalk'],
+    'diorite': ['diorite', 'aplite'],
+    'emery': ['emery', 'diorite', 'basalt', 'aplite'],
+    'flint': ['flint', 'diorite', 'aplite']
+}
+
 
 def generate_app_response(results, sort_override=None):
     target_hw = request.args.get('hardware', 'basalt')
@@ -53,7 +62,7 @@ def hw_compat(hw):
     _compat = (db.session.query(Release.compatibility, Release.app_id)
                         .order_by(Release.published_date.desc())
                         .subquery())
-    return and_(_compat.c.compatibility.contains([hw]), _compat.c.app_id == App.id)
+    return and_(_compat.c.compatibility.overlap(HARDWARE_SUPPORT[hw]), _compat.c.app_id == App.id)
 
 
 def global_filter(hw):
