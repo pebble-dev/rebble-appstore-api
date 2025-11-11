@@ -90,8 +90,8 @@ def apps_by_category(category):
     return generate_app_response(apps)
 
 
-@api.route('/apps/collection/<collection>/<app_type>')
-def apps_by_collection(collection, app_type):
+@api.route('/apps/collection/<slug>/<app_type>')
+def apps_by_collection(slug, app_type):
     hw = request.args.get('hardware', 'basalt')
     type_mapping = {
         'watchapps-and-companions': 'watchapp',
@@ -103,15 +103,18 @@ def apps_by_collection(collection, app_type):
         abort(404)
     app_type = type_mapping[app_type]
     sort_override = None
-    if collection == 'all':
+    if slug == 'all':
         apps = App.query.filter(App.type == app_type, ~generated_filter(), global_filter(hw))
-    elif collection == 'most-loved':
+    elif slug == 'most-loved':
         apps = App.query.filter(App.type == app_type, global_filter(hw))
         sort_override = 'hearts'
-    elif collection == 'all-generated':
+    elif slug == 'all-generated':
         apps = App.query.filter(App.type == app_type, generated_filter(), global_filter(hw))
     else:
-        apps = Collection.query.filter_by(collection=collection).apps.filter_by(type=app_type).filter(global_filter(hw))
+        collection = Collection.query.filter_by(slug=slug).one_or_none()
+        if collection is None:
+            abort(404)
+        apps = collection.apps.filter_by(type=app_type).filter(global_filter(hw))
     return generate_app_response(apps, sort_override=sort_override)
 
 
@@ -205,7 +208,7 @@ def home(home_type):
             'slug': collection.slug,
             'application_ids': [x.id for x in collection.apps.distinct().limit(7)],
             'links': {
-                'apps': url_for('api.apps_by_collection', collection=collection.slug, app_type=home_type)
+                'apps': url_for('api.apps_by_collection', slug=collection.slug, app_type=home_type)
             },
         } for collection in collections), {
             'name': f'Most Loved',
@@ -217,7 +220,7 @@ def home(home_type):
                     .distinct()
                     .limit(7)],
             'links': {
-                'apps': url_for('api.apps_by_collection', collection='most-loved', app_type=home_type),
+                'apps': url_for('api.apps_by_collection', slug='most-loved', app_type=home_type),
             }
         }, {
             'name': f'All {"Watchfaces" if app_type == "watchface" else "Watchapps"}',
@@ -229,7 +232,7 @@ def home(home_type):
                     .distinct()
                     .limit(7)],
             'links': {
-                'apps': url_for('api.apps_by_collection', collection='all', app_type=home_type),
+                'apps': url_for('api.apps_by_collection', slug='all', app_type=home_type),
             }
         }, *([{
             'name': f'Generated Watchfaces',
@@ -241,7 +244,7 @@ def home(home_type):
                     .distinct()
                     .limit(7)],
             'links': {
-                'apps': url_for('api.apps_by_collection', collection='all-generated', app_type=home_type),
+                'apps': url_for('api.apps_by_collection', slug='all-generated', app_type=home_type),
             }
         }] if app_type == 'watchface' else [])],
     }
