@@ -131,7 +131,7 @@ def add_heart(app_id):
         return
     except IntegrityError:
         return "already hearted", 400
-    if algolia_index:
+    if algolia_index and app.visible:
         algolia_index.partial_update_object({'objectID': app_id, 'hearts': app.hearts}, no_create=True)
     return 'ok'
 
@@ -147,7 +147,7 @@ def remove_heart(app_id):
     db.session.delete(like)
     App.query.filter_by(id=app_id).update({'hearts': App.hearts - 1})
     db.session.commit()
-    if algolia_index:
+    if algolia_index and app.visible:
         algolia_index.partial_update_object({'objectID': app_id, 'hearts': app.hearts}, no_create=True)
     return 'ok'
 
