@@ -6,22 +6,13 @@ from sqlalchemy import and_
 
 from sqlalchemy.orm.exc import NoResultFound
 
-from appstore.utils import jsonify_app, asset_fallback, generate_image_url, get_access_token
+from appstore.utils import jsonify_app, asset_fallback, generate_image_url, get_access_token, HARDWARE_SUPPORT
 from .models import App, Collection, HomeBanners, Category, db, Release
 from .settings import config
 
 parent_app = None
 api = Blueprint('api', __name__)
 CORS(api)
-
-HARDWARE_SUPPORT = {
-    'aplite': ['aplite'],
-    'basalt': ['basalt', 'aplite'],
-    'chalk': ['chalk'],
-    'diorite': ['diorite', 'aplite'],
-    'emery': ['emery', 'diorite', 'basalt', 'aplite'],
-    'flint': ['flint', 'diorite', 'aplite']
-}
 
 
 def generate_app_response(results, sort_override=None):
