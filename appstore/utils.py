@@ -17,6 +17,14 @@ import beeline
 from .settings import config
 from appstore.models import App, AssetCollection, CompanionApp
 
+HARDWARE_SUPPORT = {
+    'aplite': ['aplite'],
+    'basalt': ['basalt', 'aplite'],
+    'chalk': ['chalk'],
+    'diorite': ['diorite', 'aplite'],
+    'emery': ['emery', 'diorite', 'basalt', 'aplite'],
+    'flint': ['flint', 'diorite', 'aplite']
+}
 
 parent_app = None
 
@@ -87,7 +95,7 @@ def _jsonify_common(app: App, target_hw: str) -> dict:
             },
             **{
                 x: {
-                    'supported': x in (release.compatibility if release and release.compatibility else ['aplite', 'basalt', 'diorite', 'emery', 'flint']),
+                    'supported': bool(set(HARDWARE_SUPPORT[x]) & set(release.compatibility if release and release.compatibility else ['aplite', 'basalt', 'diorite', 'emery', 'flint'])),
                     'firmware': {'major': 3}
                 } for x in ['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint']
             },
@@ -171,7 +179,7 @@ def algolia_app(app: App) -> dict:
 
     tags = [app.type]
     if release:
-        tags.extend(release.compatibility or [])
+        tags.extend(set(item for platform in (release.compatibility or []) for item in HARDWARE_SUPPORT[platform]))
     else:
         tags.extend(['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint'])
         tags.append('companion-app')
