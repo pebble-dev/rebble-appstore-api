@@ -4,6 +4,7 @@ from flask_cors import CORS
 from werkzeug.exceptions import BadRequest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
+from datetime import datetime
 
 from .utils import authed_request, demand_authed_request, get_uid
 from .models import LockerEntry, UserLike, db, App, Developer, UserFlag
@@ -121,7 +122,7 @@ def add_heart(app_id):
     uid = get_uid()
     try:
         app = App.query.filter_by(id=app_id).one()
-        like = UserLike(user_id=uid, app_id=app_id)
+        like = UserLike(user_id=uid, app_id=app_id, created_at=datetime.now())
         db.session.add(like)
         App.query.filter_by(id=app_id).update({'hearts': App.hearts + 1})
         db.session.commit()
