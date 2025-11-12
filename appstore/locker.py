@@ -8,7 +8,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from .settings import config
 from .models import App, LockerEntry, Release, db
 from .api import api
-from .utils import get_uid, generate_pbw_url, asset_fallback, generate_image_url, plat_dimensions, jsonify_companion, get_access_token
+from .utils import get_uid, generate_pbw_url, asset_fallback, generate_image_url, plat_dimensions, jsonify_companion, get_access_token, HARDWARE_SUPPORT
 
 
 def jsonify_locker_app(entry):
@@ -60,7 +60,7 @@ def jsonify_locker_app(entry):
             },
             **{
                 x: {
-                    'supported': x in (release.compatibility if release and release.compatibility else ['aplite', 'basalt', 'diorite', 'emery', 'flint']),
+                    'supported': bool(set(HARDWARE_SUPPORT[x]) & set(release.compatibility if release and release.compatibility else ['aplite', 'basalt', 'diorite', 'emery', 'flint'])),
                     'firmware': {'major': 3}
                 } for x in ['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint']
             },
