@@ -1,14 +1,15 @@
 import urllib.parse
 
-from flask import Blueprint, request, jsonify, abort, url_for
+from flask import Blueprint, request, jsonify, abort, url_for, make_response
 from flask_cors import CORS
 from sqlalchemy import and_
 
 from sqlalchemy.orm.exc import NoResultFound
 
-from appstore.utils import jsonify_app, asset_fallback, generate_image_url, get_access_token
+from appstore.utils import jsonify_app, asset_fallback, generate_image_url, get_access_token, plat_dimensions
 from .models import App, Collection, HomeBanners, Category, db, Release
 from .settings import config
+from .image import generate_preview_image
 
 parent_app = None
 api = Blueprint('api', __name__)
@@ -74,6 +75,25 @@ def global_filter(hw):
 def apps_by_id(key):
     app = App.query.filter_by(id=key)
     return generate_app_response(app)
+
+
+@api.route('/apps/id/<key>/preview')
+def app_image_by_id(key):
+    app = App.query.filter_by(id=key).one_or_none()
+    screenshots = {}
+    for hw in ['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint']:
+        if hw in app.asset_collections:
+            screenshot = app.asset_collections[hw].screenshots[0]
+            if screenshot:
+              screenshots[hw] = generate_image_url(screenshot, *plat_dimensions[hw], True)
+
+    icon = None
+    if app.type == 'watchapp':
+        icon = generate_image_url(app.icon_large, 80, 80, True)
+    png = generate_preview_image(title=app.title, developer=app.developer.name, icon=icon, screenshots=screenshots)
+    response = make_response(png)
+    response.headers.set('Content-Type', 'image/png')
+    return response
 
 
 @api.route('/apps/dev/<dev>')
