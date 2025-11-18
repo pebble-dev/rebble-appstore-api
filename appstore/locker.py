@@ -107,6 +107,7 @@ def app_locker(app_uuid):
                 return 'invalid app', 400
             entry = LockerEntry(app=app, user_id=uid, user_token=secrets.token_urlsafe(32))
             db.session.add(entry)
+            App.query.filter_by(app_uuid=app_uuid).update({'installed': App.installed + 1})
             db.session.commit()
         return jsonify(application=jsonify_locker_app(entry))
     elif request.method == 'DELETE':
@@ -114,6 +115,7 @@ def app_locker(app_uuid):
                                                                App.app_uuid == app_uuid).one_or_none()
         if entry:
             db.session.delete(entry)
+            App.query.filter_by(app_uuid=app_uuid).update({'installed': App.installed - 1})
             db.session.commit()
         return '', 204
 

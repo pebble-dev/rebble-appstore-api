@@ -76,6 +76,7 @@ class App(db.Model):
     website = db.Column(db.String)
     visible = db.Column(db.Boolean, default=True, server_default='TRUE', nullable=False)
     timeline_token = db.Column(db.String, index=True)
+    installs = db.Column(db.Integer, index=True)
 
 
 category_banner_apps = Table('category_banner_apps', db.Model.metadata,
