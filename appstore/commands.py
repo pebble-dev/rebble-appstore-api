@@ -1,7 +1,10 @@
 import datetime
+import functools
 import hashlib
 import io
 import json
+from queue import *
+from threading import Thread, Lock
 import yaml
 
 import flask.json
@@ -579,7 +582,7 @@ def update_app(appid, conf):
         else:
             algolia_index.delete_objects([app_obj.id])
 
-def export_archive_to_zip(fn, test_only=False):
+def export_archive_to_zip(fn, test_only=False, n_threads=20):
     # test-only: only output a few files, so you can run this without a fast
     # connection to gcs
     assets = set()
@@ -696,43 +699,53 @@ def export_archive_to_zip(fn, test_only=False):
             # themselves could just as well give a user oauth creds to
             # verify their developer_id
             json.dump(developers, io.TextIOWrapper(developersf))
-            
-        print(f"{len(assets)} assets to download")
-        n = 0
-        assets_failed = {}
-        for ass in assets:
-            if (n % 100) == 0:
-                print(f"... {n} / {len(assets)} ...")
-            n += 1
-            if ass == "":
-                continue
-            try:
-                if test_only and n > 50:
-                    raise TimeoutError()
-                with zf.open(f"assets/{ass[0]}/{ass[1]}/{ass}", 'w') as assf:
-                    download_asset(ass, assf)
-            except Exception as e:
-                assets_failed[ass] = repr(e)
+        
+        zip_targets = Queue()
+        downloads_failed = {}
 
-        print(f"{len(binaries)} binaries to download")
-        n = 0
-        binaries_failed = {}
-        for pbw in binaries:
-            if (n % 100) == 0:
-                print(f"... {n} / {len(binaries)} ...")
-            n += 1
-            if pbw == "":
+        for ass in assets:
+            if ass == "" or ass is None:
                 continue
-            try:
-                if test_only and n > 50:
-                    raise TimeoutError()
-                with zf.open(f"binaries/{pbw[0]}/{pbw[1]}/{pbw}.pbw", 'w') as pbwf:
-                    download_pbw(pbw, pbwf)
-            except Exception as e:
-                binaries_failed[pbw] = repr(e)
+            zip_targets.put((f"assets/{ass[0]}/{ass[1]}/{ass}", functools.partial(download_asset, ass)))
+        
+        for pbw in binaries:
+            if pbw == "" or pbw is None:
+                continue
+            zip_targets.put((f"binaries/{pbw[0]}/{pbw[1]}/{pbw}.pbw", functools.partial(download_pbw, pbw)))
+        
+        n = 0
+        zip_lock = Lock()
+        def download_thread():
+            nonlocal n, downloads_failed, zip_targets
+            while True:
+                try:
+                    fname, download = zip_targets.get_nowait()
+                except Empty:
+                    return
+
+                try:
+                    if test_only and n > 50:
+                        raise TimeoutError()
+                    buf = io.BytesIO()
+                    download(buf)
+                    with zip_lock, zf.open(fname, 'w') as zff:
+                        zff.write(buf.getbuffer())
+                    buf.close()
+                except Exception as e:
+                    downloads_failed[fname] = repr(e)
+
+                if (n % 100) == 0:
+                    print(f"... {n} done, {zip_targets.qsize()} to go ...")
+                n += 1
+                
+                zip_targets.task_done()
+        
+        for i in range(n_threads):
+            Thread(target=download_thread).start()
+        zip_targets.join()
         
         with zf.open("metadata/failed_downloads.json", "w") as failedf:
-            json.dump({ 'binaries_failed': binaries_failed, 'assets_failed': assets_failed }, io.TextIOWrapper(failedf))
+            json.dump(downloads_failed, io.TextIOWrapper(failedf))
 
         with open(f"{os.path.dirname(__file__)}/ARCHIVE_LICENSE", "rb") as rf, zf.open("LICENSE.txt", "w") as wf:
             wf.write(rf.read())
