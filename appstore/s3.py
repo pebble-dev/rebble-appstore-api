@@ -117,3 +117,12 @@ def download_asset(id, file):
         s3.download_file(config['S3_ASSET_BUCKET'], filename, file)
     else:
         s3.download_fileobj(config['S3_ASSET_BUCKET'], filename, file)
+
+def upload_archive(filename, file, mime_type = 'application/zip'):
+    s3_filename = f"{config['S3_ARCHIVE_PATH']}{filename}"
+    s3 = _client_for_endpoint(s3_endpoint)
+    if isinstance(file, str):
+        s3.upload_file(file, config['S3_ARCHIVE_BUCKET'], s3_filename, ExtraArgs = { 'ContentType': mime_type })
+    else:
+        file.seek(0)
+        s3.upload_fileobj(file, config['S3_ARCHIVE_BUCKET'], s3_filename, ExtraArgs = { 'ContentType': mime_type })
