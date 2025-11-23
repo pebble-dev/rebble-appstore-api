@@ -6,7 +6,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
 
 from .settings import config
-from .models import App, LockerEntry, Release, db
+from .models import App, LockerEntry, db
 from .api import api
 from .utils import get_uid, generate_pbw_url, asset_fallback, generate_image_url, plat_dimensions, jsonify_companion, get_access_token
 

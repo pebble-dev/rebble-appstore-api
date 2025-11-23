@@ -6,7 +6,6 @@ import yaml
 import flask.json
 import shutil
 import subprocess
-import uuid
 import zipfile
 
 import click
@@ -16,7 +15,6 @@ from flask.cli import AppGroup
 import requests
 from sqlalchemy.orm import load_only
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.exc import IntegrityError
 
 from algoliasearch import algoliasearch
 
@@ -248,7 +246,7 @@ def import_app_from_locker(locker_app):
         if not os.path.exists(filename):
             with requests.get(release['file'], stream=True) as r:
                 if r.status_code != 200:
-                    print(f"FAILED to download pbw.")
+                    print("FAILED to download pbw.")
                     return False
                 with open(filename, 'wb') as f:
                     shutil.copyfileobj(r.raw, f)

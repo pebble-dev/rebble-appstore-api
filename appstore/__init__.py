@@ -8,7 +8,7 @@ try:
 except ImportError:
     print("Couldn't import google exceptions")
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify
 from werkzeug.middleware.proxy_fix import ProxyFix
 from rws_common import honeycomb
 
@@ -20,7 +20,6 @@ from .dev_portal_api import init_app as init_dev_portal_api
 from .developer_portal_api import init_app as init_developer_portal_api
 from .commands import init_app as init_commands
 from .utils import init_app as init_utils
-from .locker import locker
 
 app = Flask(__name__)
 app.config.update(**config)

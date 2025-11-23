@@ -1,7 +1,5 @@
 import json
 import boto3
-from botocore.exceptions import ClientError
-from .models import Binary
 from .settings import config
 from .utils import id_generator
 
@@ -17,7 +15,7 @@ try:
             aws_secret_access_key=config['AWS_SECRET_KEY'],
         )
         s3_endpoint = config['S3_ENDPOINT']
-except:
+except Exception:
     pass
 
 
@@ -41,7 +39,7 @@ try:
             aws_session_token=creds['Credentials'].get('SessionToken'),
         )
         s3_endpoint = creds.get('S3Endpoint')
-except:
+except Exception:
     pass
 
 if not session:
@@ -74,7 +72,7 @@ def upload_asset(file, mime_type = None):
             elif file.endswith(".png"):
                 mime_type = "image/png"
             else:
-                raise Exception(f"Unknown or unsupported mime_type for file provided to update_asset")
+                raise Exception("Unknown or unsupported mime_type for file provided to update_asset")
 
         s3 = session.client('s3', endpoint_url=s3_endpoint)
         s3.upload_file(file, config['S3_ASSET_BUCKET'], filename, ExtraArgs = {'ContentType': mime_type})
