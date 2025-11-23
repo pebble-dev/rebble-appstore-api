@@ -5,6 +5,7 @@ import io
 import json
 from queue import *
 from threading import Thread, Lock
+import tempfile
 import yaml
 
 import flask.json
@@ -25,7 +26,7 @@ from algoliasearch import algoliasearch
 from .utils import id_generator, algolia_app
 from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike, Collection
 from .pbw import PBW, release_from_pbw
-from .s3 import upload_pbw, upload_asset, download_pbw, download_asset
+from .s3 import upload_pbw, upload_asset, download_pbw, download_asset, upload_archive
 from .settings import config
 
 if config['ALGOLIA_ADMIN_API_KEY']:
@@ -757,11 +758,13 @@ def export_archive_to_zip(fn, test_only=False, n_threads=20):
 def export_archive(output, upload, test):
     print(f"Preparing to export archive...")
     if not output:
-        # ... mkstemp ...
-        pass
+        output = tempfile.TemporaryFile()
     export_archive_to_zip(output, test_only=test)
-    # XXX: upload to s3
-    
+    if upload:
+        now = datetime.datetime.now()
+        filename = f"appstore-archive-{now.year:04d}{now.month:02d}.zip"
+        print(f"uploading to {filename}")
+        upload_archive(filename, output)
 
 def init_app(app):
     app.cli.add_command(apps)
