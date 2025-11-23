@@ -211,7 +211,7 @@ def home(home_type):
                 'apps': url_for('api.apps_by_collection', slug=collection.slug, app_type=home_type)
             },
         } for collection in collections), {
-            'name': f'Most Loved',
+            'name': 'Most Loved',
             'slug': 'most-loved',
             'application_ids': [
                 x.id for x in App.query
@@ -235,7 +235,7 @@ def home(home_type):
                 'apps': url_for('api.apps_by_collection', slug='all', app_type=home_type),
             }
         }, *([{
-            'name': f'Generated Watchfaces',
+            'name': 'Generated Watchfaces',
             'slug': 'all-generated',
             'application_ids': [
                 x.id for x in App.query

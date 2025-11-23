@@ -2,7 +2,6 @@ import os
 import random
 import time
 import imghdr
-import struct
 
 from typing import Dict, Optional
 from uuid import getnode
@@ -329,7 +328,7 @@ def is_valid_appinfo(appinfo_object):
     appinfo = appinfo_object
 
     for f in basic_required_fields:
-        if not f in appinfo:
+        if f not in appinfo:
             return False, f"Missing field '{f}'"
 
     for p in appinfo["targetPlatforms"]:
@@ -363,28 +362,30 @@ def validate_new_app_fields(request):
 
     # If we have an app, check app-specific fields
     if data["type"] == "watchapp":
-        if not "category" in data:
+        if "category" not in data:
             raise newAppValidationException("Missing field: category", "category.missing")
 
         if not is_valid_category(data["category"]):
             raise newAppValidationException("Illegal value for category", "category.illegal")
 
-        if not "small_icon" in request.files:
+        if "small_icon" not in request.files:
             raise newAppValidationException("Missing file: small_icon", "small_icon.missing")
 
-        if not "banner" in request.files:
+        if "banner" not in request.files:
             raise newAppValidationException("Missing file: banner", "banner.missing")
 
     # Check we have a large icon file
-    if not "large_icon" in request.files:
+    if "large_icon" not in request.files:
         raise newAppValidationException("Missing file: large_icon", "large_icon.missing")
 
-    if not is_valid_image_file(request.files["large_icon"]):
+    imgtype, img_valid = is_valid_image_file(request.files["large_icon"])
+    if not img_valid:
         raise newAppValidationException("Illegal image type: " + str(imgtype), "large_icon.illegalvalue")
 
     # Check file types and file sizes of optional images
     if "banner" in request.files:
-        if not is_valid_image_file(request.files["banner"]):
+        imgtype, img_valid = is_valid_image_file(request.files["banner"])
+        if not img_valid:
             raise newAppValidationException("Illegal image type: " + str(imgtype), "banner.illegalvalue")
 
         if not is_valid_image_size(request.files["banner"], "banner"):
@@ -392,7 +393,8 @@ def validate_new_app_fields(request):
             raise newAppValidationException(f"Banner has incorrect dimensions. Should be {max_w}x{max_h}", "banner.illegaldimensions")
 
     if "small_icon" in request.files:
-        if not is_valid_image_file(request.files["small_icon"]):
+        imgtype, img_valid = is_valid_image_file(request.files["small_icon"])
+        if not img_valid:
             raise newAppValidationException("Illegal image type: " + str(imgtype), "small_icon.illegalvalue")
 
         if not is_valid_image_size(request.files["small_icon"], "small_icon"):
@@ -450,7 +452,7 @@ def clone_asset_collection_without_images(appObject, platform):
 
 def is_valid_image_file(file):
     imgtype = imghdr.what(file)
-    return imgtype in permitted_image_types
+    return (imgtype, imgtype in permitted_image_types)
 
 def get_app_description(app):
     for p in valid_platforms:
