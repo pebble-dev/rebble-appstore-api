@@ -404,8 +404,17 @@ def generate_index():
     apps = App.query.order_by(App.id)
     result = []
     for app in apps:
-        result.append(algolia_app(app))
+        if app.visible:
+            result.append(algolia_app(app))
     print(flask.json.dumps(result, indent=2))
+
+
+@apps.command('remove-hidden-apps-index')
+def remove_hidden_apps_index():
+    apps = App.query.filter_by(visible=False).order_by(App.id)
+    if algolia_index:
+        algolia_index.delete_objects([app.id for app in apps])
+
 
 @apps.command('update-patched-release')
 @click.argument('new_pbw')
@@ -513,7 +522,7 @@ def new_app(conf):
     upload_pbw(release, path(pbw_file))
     db.session.commit()
     
-    if algolia_index:
+    if algolia_index and app_obj.visible:
         algolia_index.partial_update_objects([algolia_app(app_obj)], { 'createIfNotExists': True })
 
 @apps.command('update-app')
@@ -562,9 +571,12 @@ def update_app(appid, conf):
     print(f"Created release {release.id}")
     upload_pbw(release, path(pbw_file))
     db.session.commit()
-    
+
     if algolia_index:
-        algolia_index.partial_update_objects([algolia_app(app_obj)], { 'createIfNotExists': True })
+        if app_obj.visible:
+            algolia_index.partial_update_objects([algolia_app(app_obj)], { 'createIfNotExists': False })
+        else:
+            algolia_index.delete_objects([app_obj.id])
 
 
 def init_app(app):

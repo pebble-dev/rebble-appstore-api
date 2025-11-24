@@ -157,6 +157,10 @@ def submit_new_app():
             app_is_timeline_enabled = True
             timeline_token = secrets.token_urlsafe(32)
 
+        is_visible = True
+        if 'visible' in params and params['visible'] == 'false':
+            is_visible = False
+
         # Remove any platforms with no screenshots
         screenshots = {k: v for k, v in screenshots.items() if v}
         app_obj = App(
@@ -182,6 +186,7 @@ def submit_new_app():
             type=params['type'],
             timeline_enabled=app_is_timeline_enabled,
             timeline_token=timeline_token,
+            visible=is_visible,
             website=params['website'] if 'website' in params else "",
         )
         db.session.add(app_obj)
@@ -196,7 +201,7 @@ def submit_new_app():
         upload_pbw(release, request.files['pbw'])
         db.session.commit()
 
-        if algolia_index:
+        if algolia_index and app_obj.visible:
             algolia_index.partial_update_objects([algolia_app(app_obj)], { 'createIfNotExists': True })
 
         try:
@@ -272,7 +277,10 @@ def update_app_fields(app_id):
 
         db.session.commit()
         if algolia_index:
-            algolia_index.partial_update_objects([algolia_app(app)], { 'createIfNotExists': False })
+            if app.visible:
+                algolia_index.partial_update_objects([algolia_app(app)], { 'createIfNotExists': False })
+            else:
+                algolia_index.delete_objects([app_id])
 
         return jsonify(success=True, id=app.id)
 
