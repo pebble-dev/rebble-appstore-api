@@ -4,7 +4,6 @@ import random
 
 from .settings import config
 from .utils import get_app_description, generate_image_url, who_am_i
-from appstore.models import App
 
 party_time_emoji = ["🎉","🥳","👏","❤️","🥰","🎊"]
 
@@ -113,9 +112,9 @@ def audit_log(operation, affected_app_uuid = None):
 
     request_data = {
         "embeds": [{
-            "title": f"Wizard Audit Log 🪄",
+            "title": "Wizard Audit Log 🪄",
             "color": int("0xffaa00", 0),
-            "description": f"Someone has executed a wizard operation on the developer portal",
+            "description": "Someone has executed a wizard operation on the developer portal",
             "thumbnail": {
                 "url": "https://dev-portal.rebble.io/res/img/large_icon_launchpad.svg",
                 "height": 80,
@@ -149,9 +148,9 @@ def report_app_flag(reported_by, app_name, developer_name, app_id, affected_app_
 
     request_data = {
         "embeds": [{
-            "title": f"New Flagged App Report 🚩",
+            "title": "New Flagged App Report 🚩",
             "color": int("0xFF4745", 0),
-            "description": f"An end user has reported an app on the appstore from within a mobile app.",
+            "description": "An end user has reported an app on the appstore from within a mobile app.",
             "thumbnail": {
                 "url": "https://i.imgur.com/5f6rGQ9.png",
                 "height": 80,

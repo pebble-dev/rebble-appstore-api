@@ -9,7 +9,7 @@ import uuid
 import zipfile
 import datetime
 import hashlib
-from .models import Binary, App, Release, db
+from .models import Binary, Release, db
 from .utils import id_generator
 
 PLATFORMS = ['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint']
@@ -49,9 +49,9 @@ class PBW(object):
         self.platform = platform
         # pbw can be file path or bytes bundle. Determine which
         if isinstance(pbw, str):
-            bundle = os.path.abspath(bundle_path)
-            if not os.path.exists(bundle):
-                raise Exception("Bundle does not exist: " + bundle_path)
+            bundle_abs_path = os.path.abspath(pbw)
+            if not os.path.exists(bundle_abs_path):
+                raise Exception("Bundle does not exist: " + pbw)
 
             self.path = bundle_abs_path
         else:
@@ -185,7 +185,7 @@ class PBW(object):
     def create_binary(self, release):
         if not self.has_platform:
             return
-        metadata = self.get_app_metadata();
+        metadata = self.get_app_metadata()
         binary = Binary(release=release, platform=self.platform,
                         sdk_major=metadata['sdk_version_major'], sdk_minor=metadata['sdk_version_minor'],
                         process_info_flags=metadata['flags'], icon_resource_id=metadata['icon_resource_id'])

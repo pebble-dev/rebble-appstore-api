@@ -6,9 +6,9 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
 
 from .settings import config
-from .models import App, LockerEntry, Release, db
+from .models import App, LockerEntry, db
 from .api import api
-from .utils import get_uid, generate_pbw_url, asset_fallback, generate_image_url, plat_dimensions, jsonify_companion, get_access_token
+from .utils import get_uid, generate_pbw_url, asset_fallback, generate_image_url, plat_dimensions, jsonify_companion, get_access_token, HARDWARE_SUPPORT
 
 
 def jsonify_locker_app(entry):
@@ -60,7 +60,7 @@ def jsonify_locker_app(entry):
             },
             **{
                 x: {
-                    'supported': x in (release.compatibility if release and release.compatibility else ['aplite', 'basalt', 'diorite', 'emery', 'flint']),
+                    'supported': bool(set(HARDWARE_SUPPORT[x]) & set(release.compatibility if release and release.compatibility else ['aplite', 'basalt', 'diorite', 'emery', 'flint'])),
                     'firmware': {'major': 3}
                 } for x in ['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint']
             },
@@ -107,6 +107,7 @@ def app_locker(app_uuid):
                 return 'invalid app', 400
             entry = LockerEntry(app=app, user_id=uid, user_token=secrets.token_urlsafe(32))
             db.session.add(entry)
+            App.query.filter_by(app_uuid=app_uuid).update({'installed': App.installed + 1})
             db.session.commit()
         return jsonify(application=jsonify_locker_app(entry))
     elif request.method == 'DELETE':
@@ -114,6 +115,7 @@ def app_locker(app_uuid):
                                                                App.app_uuid == app_uuid).one_or_none()
         if entry:
             db.session.delete(entry)
+            App.query.filter_by(app_uuid=app_uuid).update({'installed': App.installed - 1})
             db.session.commit()
         return '', 204
 

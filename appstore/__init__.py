@@ -8,7 +8,7 @@ try:
 except ImportError:
     print("Couldn't import google exceptions")
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify
 from werkzeug.middleware.proxy_fix import ProxyFix
 from rws_common import honeycomb
 

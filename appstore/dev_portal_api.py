@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 from datetime import datetime
 
-from .utils import authed_request, demand_authed_request, get_uid
+from .utils import demand_authed_request, get_uid
 from .models import LockerEntry, UserLike, db, App, Developer, UserFlag
 from .discord import report_app_flag
 from .settings import config
@@ -98,11 +98,11 @@ def update_my_developer():
         return jsonify(error="Invalid POST body. Expected JSON and 'Content-Type: application/json'", e="request.invalid"), 400
 
     for f in req:
-        if not f in permitted_fields:
+        if f not in permitted_fields:
             return jsonify(error=f"Illegal field: {f}", e="illegal.field"), 400
 
-    if not "name" in req:
-        return jsonify(error=f"Missing required field: name", e="missing.field.name"), 400
+    if "name" not in req:
+        return jsonify(error="Missing required field: name", e="missing.field.name"), 400
 
     # Resolve our auth token to our developer ID
     result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")

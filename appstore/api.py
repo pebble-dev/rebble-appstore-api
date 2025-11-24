@@ -6,7 +6,7 @@ from sqlalchemy import and_
 
 from sqlalchemy.orm.exc import NoResultFound
 
-from appstore.utils import jsonify_app, asset_fallback, generate_image_url, get_access_token, plat_dimensions
+from appstore.utils import jsonify_app, asset_fallback, generate_image_url, get_access_token, plat_dimensions, HARDWARE_SUPPORT
 from .models import App, Collection, HomeBanners, Category, db, Release
 from .settings import config
 from .image import generate_preview_image
@@ -14,15 +14,6 @@ from .image import generate_preview_image
 parent_app = None
 api = Blueprint('api', __name__)
 CORS(api)
-
-HARDWARE_SUPPORT = {
-    'aplite': ['aplite'],
-    'basalt': ['basalt', 'aplite'],
-    'chalk': ['chalk'],
-    'diorite': ['diorite', 'aplite'],
-    'emery': ['emery', 'diorite', 'basalt', 'aplite'],
-    'flint': ['flint', 'diorite', 'aplite']
-}
 
 
 def generate_app_response(results, sort_override=None):
@@ -231,7 +222,7 @@ def home(home_type):
                 'apps': url_for('api.apps_by_collection', slug=collection.slug, app_type=home_type)
             },
         } for collection in collections), {
-            'name': f'Most Loved',
+            'name': 'Most Loved',
             'slug': 'most-loved',
             'application_ids': [
                 x.id for x in App.query
@@ -255,7 +246,7 @@ def home(home_type):
                 'apps': url_for('api.apps_by_collection', slug='all', app_type=home_type),
             }
         }, *([{
-            'name': f'Generated Watchfaces',
+            'name': 'Generated Watchfaces',
             'slug': 'all-generated',
             'application_ids': [
                 x.id for x in App.query
