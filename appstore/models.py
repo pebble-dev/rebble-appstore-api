@@ -179,6 +179,15 @@ class UserFlag(db.Model):
     app = db.relationship('App')
 db.Index('user_flag_app_user_index', UserFlag.app_id, UserFlag.user_id, unique=True)
 
+class AvailableArchive(db.Model):
+    """
+    Archives in S3 of the appstore database.
+    """
+    __tablename__ = "available_archives"
+    id = db.Column(db.Integer(), primary_key=True, index=True)
+    created_at = db.Column(db.DateTime, index=True)
+    filename = db.Column(db.String)
+
 def init_app(app):
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)

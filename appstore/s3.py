@@ -126,3 +126,13 @@ def upload_archive(filename, file, mime_type = 'application/zip'):
     else:
         file.seek(0)
         s3.upload_fileobj(file, config['S3_ARCHIVE_BUCKET'], s3_filename, ExtraArgs = { 'ContentType': mime_type })
+
+def get_link_for_archive(filename, expiry = 3600):
+    s3 = _client_for_endpoint(s3_endpoint)
+    return s3.generate_presigned_url('get_object',
+        Params={
+            'Bucket': config['S3_ARCHIVE_BUCKET'],
+            'Key': f"{config['S3_ARCHIVE_PATH']}{filename}"
+        },
+        ExpiresIn=expiry
+    )
