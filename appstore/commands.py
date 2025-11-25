@@ -24,7 +24,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from algoliasearch import algoliasearch
 
 from .utils import id_generator, algolia_app
-from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike, Collection
+from .models import Category, db, App, Developer, Release, CompanionApp, Binary, AssetCollection, LockerEntry, UserLike, Collection, AvailableArchive
 from .pbw import PBW, release_from_pbw
 from .s3 import upload_pbw, upload_asset, download_pbw, download_asset, upload_archive
 from .settings import config
@@ -765,6 +765,9 @@ def export_archive(output, upload, test):
         filename = f"appstore-archive-{now.year:04d}{now.month:02d}.zip"
         print(f"uploading to {filename}")
         upload_archive(filename, output)
+        db.session.add(AvailableArchive(filename=filename, created_at=datetime.datetime.now()))
+        db.session.commit()
+
 
 def init_app(app):
     app.cli.add_command(apps)
