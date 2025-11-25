@@ -10,10 +10,10 @@ from .utils import valid_platforms
 
 parent_app = None
 
-canvas_size = (780, 520)
+static_folder = os.path.join(os.path.dirname(__file__), 'static')
 
-background_color=(255, 71, 0)
-overlay_color=(55, 58, 60)
+background = Image.open(os.path.join(static_folder, 'background.png')).convert('RGBA')
+
 text_color=(255, 255, 255)
 
 overlay_box=(0, 392, 780, 520)
@@ -21,42 +21,45 @@ icon_position=(24, 416)
 base_title_position=(36, 404)
 base_author_position=(36, 460)
 base_text_space=530
-logo_position=(576, 418)
 
-def platform_borders(platform):
-    if platform == 'emery':
-        return {
-            'image': Image.open(os.path.join(parent_app.static_folder, 'emery-border.png')).convert("RGBA"),
-            'fallback': Image.open(os.path.join(parent_app.static_folder, 'fallback-emery.png')).convert("RGBA"),
-            'offset': (65, 79)
-        }
+icon_mask = Image.open(os.path.join(static_folder, 'icon-mask.png')).convert('L')
+chalk_mask = Image.open(os.path.join(static_folder, 'chalk-mask.png')).convert('L')
 
-    if platform == 'diorite' or platform == 'flint':
-        return {
-            'image': Image.open(os.path.join(parent_app.static_folder, 'diorite-border.png')).convert("RGBA"),
-            'fallback': Image.open(os.path.join(parent_app.static_folder, 'fallback-bw.png')).convert("RGBA"),
-            'offset': (54, 110)
-        }
-
-    if platform == 'basalt':
-        return {
-            'image': Image.open(os.path.join(parent_app.static_folder, 'basalt-border.png')).convert("RGBA"),
-            'fallback': Image.open(os.path.join(parent_app.static_folder, 'fallback-basalt.png')).convert("RGBA"),
-            'offset': (88,111)
-        }
-
-    if platform == 'chalk':
-        return {
-            'image': Image.open(os.path.join(parent_app.static_folder, 'chalk-border.png')).convert("RGBA"),
-            'fallback': Image.open(os.path.join(parent_app.static_folder, 'fallback-chalk.png')).convert("RGBA"),
-            'offset': (71,105)
-        }
-
-    return {
-        'image': Image.open(os.path.join(parent_app.static_folder, 'aplite-border.png')).convert("RGBA"),
-        'fallback': Image.open(os.path.join(parent_app.static_folder, 'fallback-bw.png')).convert("RGBA"),
+platform_borders = {
+    'aplite': {
+        'image': Image.open(os.path.join(static_folder, 'aplite-border.png')).convert("RGBA"),
+        'fallback': Image.open(os.path.join(static_folder, 'fallback-bw.png')).convert("RGBA"),
         'offset': (68,106)
+    },
+    'basalt': {
+        'image': Image.open(os.path.join(static_folder, 'basalt-border.png')).convert("RGBA"),
+        'fallback': Image.open(os.path.join(static_folder, 'fallback-basalt.png')).convert("RGBA"),
+        'offset': (88,111)
+    },
+    'chalk': {
+        'image': Image.open(os.path.join(static_folder, 'chalk-border.png')).convert("RGBA"),
+        'fallback': Image.open(os.path.join(static_folder, 'fallback-chalk.png')).convert("RGBA"),
+        'offset': (71,105)
+    },
+    'diorite': {
+        'image': Image.open(os.path.join(static_folder, 'diorite-border.png')).convert("RGBA"),
+        'fallback': Image.open(os.path.join(static_folder, 'fallback-bw.png')).convert("RGBA"),
+        'offset': (54, 110)
+    },
+    'emery': {
+        'image': Image.open(os.path.join(static_folder, 'emery-border.png')).convert("RGBA"),
+        'fallback': Image.open(os.path.join(static_folder, 'fallback-emery.png')).convert("RGBA"),
+        'offset': (65, 79)
+    },
+    'flint': {
+        'image': Image.open(os.path.join(static_folder, 'diorite-border.png')).convert("RGBA"),
+        'fallback': Image.open(os.path.join(static_folder, 'fallback-bw.png')).convert("RGBA"),
+        'offset': (54, 110)
     }
+}
+
+font_large = ImageFont.truetype(os.path.join(static_folder, 'Lato-Bold.ttf'), 48)
+font_small = ImageFont.truetype(os.path.join(static_folder, 'Lato-Regular.ttf'), 32)
 
 def preferred_grouping(platforms):
     order = [['diorite', 'emery'], ['flint', 'emery'], ['basalt', 'emery'], ['chalk', 'emery'],
@@ -94,11 +97,10 @@ def draw_text_ellipsized(draw, text, font, xy, max_width):
     draw.text(xy, trimmed + ellipsis, font=font, fill=text_color)
 
 def platform_image_in_border(canvas, image_url, top_left, platform):
-    border = platform_borders(platform)
+    border = platform_borders[platform]
     img = load_image_from_url(image_url, border['fallback'])
 
     if platform == 'chalk':
-        chalk_mask = Image.open(os.path.join(parent_app.static_folder, 'chalk-mask.png')).convert('L')
         img.putalpha(chalk_mask)
 
     ix = top_left[0] + border['offset'][0]
@@ -109,16 +111,11 @@ def platform_image_in_border(canvas, image_url, top_left, platform):
     canvas.alpha_composite(border['image'], top_left)
 
 def generate_preview_image(title, developer, icon, screenshots):
-    canvas = Image.new("RGBA", canvas_size, background_color)
+    canvas = background.copy()
     draw = ImageDraw.Draw(canvas)
 
-    logo=Image.open(os.path.join(parent_app.static_folder, 'rebble-appstore-logo.png')).convert('RGBA')
-
-    draw.rectangle(overlay_box, fill=overlay_color)
-    canvas.alpha_composite(logo, logo_position)
-
     platforms = preferred_grouping(screenshots.keys())
-    start_x = ceil((canvas.width - sum(platform_borders(platform)['image'].width for platform in platforms)) / 2)
+    start_x = ceil((canvas.width - sum(platform_borders[platform]['image'].width for platform in platforms)) / 2)
 
     for platform in platforms:
         platform_image_in_border(
@@ -127,7 +124,7 @@ def generate_preview_image(title, developer, icon, screenshots):
             top_left=(start_x, 0),
             platform=platform
         )
-        start_x += platform_borders(platform)['image'].width
+        start_x += platform_borders[platform]['image'].width
 
     title_position = base_title_position
     author_position = base_author_position
@@ -140,16 +137,11 @@ def generate_preview_image(title, developer, icon, screenshots):
         icon_image = None
 
     if icon_image:
-        icon_mask = Image.open(os.path.join(parent_app.static_folder, 'icon-mask.png')).convert('L')
-
         icon_image.putalpha(ImageChops.multiply(icon_mask, icon_image.split()[3]))
         canvas.alpha_composite(icon_image, icon_position)
         title_position = (title_position[0] + 88, title_position[1])
         author_position = (author_position[0] + 88, author_position[1])
         text_space -= 88
-
-    font_large = ImageFont.truetype(os.path.join(parent_app.static_folder, 'Lato-Bold.ttf'), 48)
-    font_small = ImageFont.truetype(os.path.join(parent_app.static_folder, 'Lato-Regular.ttf'), 32)
 
     draw_text_ellipsized(draw, title, font_large, title_position, text_space)
     draw_text_ellipsized(draw, developer, font_small, author_position, text_space)
