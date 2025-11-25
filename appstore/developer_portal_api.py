@@ -3,7 +3,7 @@ import datetime
 import secrets
 
 from algoliasearch import algoliasearch
-from flask import Blueprint, jsonify, abort, request
+from flask import Blueprint, jsonify, abort, request, redirect
 from flask_cors import CORS
 
 from sqlalchemy.exc import IntegrityError
@@ -12,10 +12,10 @@ from werkzeug.exceptions import BadRequest
 from sqlalchemy.exc import DataError
 from zipfile import BadZipFile
 
-from .utils import demand_authed_request, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file, is_valid_image_size, get_max_image_dimensions, is_users_developer_id, user_is_wizard, newAppValidationException, algolia_app, first_version_is_newer
-from .models import db, App, Developer, Release, AssetCollection
+from .utils import demand_authed_request, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file, is_valid_image_size, get_max_image_dimensions, is_users_developer_id, user_is_wizard, newAppValidationException, algolia_app, first_version_is_newer, get_uid
+from .models import db, App, Developer, Release, AssetCollection, AvailableArchive
 from .pbw import PBW, release_from_pbw
-from .s3 import upload_pbw, upload_asset
+from .s3 import upload_pbw, upload_asset, get_link_for_archive
 from .settings import config
 from .discord import announce_release, announce_new_app, audit_log
 
@@ -767,6 +767,13 @@ def wizard_get_s3_assets(app_id):
 
     return jsonify(images = images, pbws = pbws)
 
+
+@devportal_api.route('/archive/latest', methods=['GET'])
+def download_archive():
+    uid = get_uid() # unused, does auth so AI scrapers don't waste all our bandwidth, though
+    
+    archive = AvailableArchive.query.order_by(AvailableArchive.created_at.desc()).limit(1).one()
+    return redirect(get_link_for_archive(archive.filename))
 
 def init_app(app, url_prefix='/api/dp'):
     global parent_app

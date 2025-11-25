@@ -60,7 +60,8 @@ class App(db.Model):
     collections = db.relationship('Collection',
                                   back_populates='apps',
                                   secondary=collection_apps,
-                                  passive_deletes=True)
+                                  passive_deletes=True,
+                                  lazy='selectin')
     created_at = db.Column(db.DateTime)
     developer_id = db.Column(db.String(24), db.ForeignKey('developers.id'))
     developer = db.relationship('Developer', lazy='joined')
@@ -177,6 +178,15 @@ class UserFlag(db.Model):
     app_id = db.Column(db.String(24), db.ForeignKey('apps.id', ondelete='cascade'), primary_key=True, index=True)
     app = db.relationship('App')
 db.Index('user_flag_app_user_index', UserFlag.app_id, UserFlag.user_id, unique=True)
+
+class AvailableArchive(db.Model):
+    """
+    Archives in S3 of the appstore database.
+    """
+    __tablename__ = "available_archives"
+    id = db.Column(db.Integer(), primary_key=True, index=True)
+    created_at = db.Column(db.DateTime, index=True)
+    filename = db.Column(db.String)
 
 def init_app(app):
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False

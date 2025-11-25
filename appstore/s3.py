@@ -1,11 +1,15 @@
 import json
 import boto3
+import threading
+from botocore.exceptions import ClientError
+from .models import Binary
 from .settings import config
 from .utils import id_generator
 
 # Try to find a way to get S3 credentials.
 session = None
 s3_endpoint = None
+session_lock = threading.Lock()
 
 # Try loading creds from the environment.
 try:
@@ -45,18 +49,38 @@ except Exception:
 if not session:
     print("no session")
 
+_clients = {}
+
+def _client_for_endpoint(endpoint):
+    me = threading.current_thread()
+    if (me, endpoint) in _clients:
+        return _clients[(me, endpoint)]
+    with session_lock:
+        s3 = session.client('s3', endpoint_url=endpoint)
+    _clients[(me, endpoint)] = s3
+    return s3
+
 def upload_pbw(release, file):
     filename = f"{config['S3_PATH']}{release.id}.pbw"
 
     if isinstance(file, str):
         print(f"uploading file {file} to {config['S3_BUCKET']}:{filename}")
-        s3 = session.client('s3', endpoint_url=s3_endpoint)
+        s3 = _client_for_endpoint(s3_endpoint)
         s3.upload_file(file, config['S3_BUCKET'], filename)
     else:
         print(f"uploading file object {file.name} to {config['S3_BUCKET']}:{filename}")   
-        s3 = session.client('s3', endpoint_url=s3_endpoint)
+        s3 = _client_for_endpoint(s3_endpoint)
         file.seek(0)
         s3.upload_fileobj(file, config['S3_BUCKET'], filename, ExtraArgs = {'ContentType': 'application/zip'})   
+
+def download_pbw(id, file):
+    filename = f"{config['S3_PATH']}{id}.pbw"
+    s3 = _client_for_endpoint(s3_endpoint)
+    if isinstance(file, str):
+        s3.download_file(config['S3_BUCKET'], filename, file)
+    else:
+        s3.download_fileobj(config['S3_BUCKET'], filename, file)
+
 
 def upload_asset(file, mime_type = None):
     id = id_generator.generate()
@@ -74,14 +98,41 @@ def upload_asset(file, mime_type = None):
             else:
                 raise Exception("Unknown or unsupported mime_type for file provided to update_asset")
 
-        s3 = session.client('s3', endpoint_url=s3_endpoint)
+        s3 = _client_for_endpoint(s3_endpoint)
         s3.upload_file(file, config['S3_ASSET_BUCKET'], filename, ExtraArgs = {'ContentType': mime_type})
         return id
     
     else:
         print(f"uploading file object '{file.name}' to {config['S3_ASSET_BUCKET']}:{filename}")
         file.seek(0)
-        s3 = session.client('s3', endpoint_url=s3_endpoint)
+        s3 = _client_for_endpoint(s3_endpoint)
         s3.upload_fileobj(file, config['S3_ASSET_BUCKET'], filename, ExtraArgs = {'ContentType': mime_type})
     
     return id    
+
+def download_asset(id, file):
+    filename = f"{config['S3_ASSET_PATH']}{id}"
+    s3 = _client_for_endpoint(s3_endpoint)
+    if isinstance(file, str):
+        s3.download_file(config['S3_ASSET_BUCKET'], filename, file)
+    else:
+        s3.download_fileobj(config['S3_ASSET_BUCKET'], filename, file)
+
+def upload_archive(filename, file, mime_type = 'application/zip'):
+    s3_filename = f"{config['S3_ARCHIVE_PATH']}{filename}"
+    s3 = _client_for_endpoint(s3_endpoint)
+    if isinstance(file, str):
+        s3.upload_file(file, config['S3_ARCHIVE_BUCKET'], s3_filename, ExtraArgs = { 'ContentType': mime_type })
+    else:
+        file.seek(0)
+        s3.upload_fileobj(file, config['S3_ARCHIVE_BUCKET'], s3_filename, ExtraArgs = { 'ContentType': mime_type })
+
+def get_link_for_archive(filename, expiry = 3600):
+    s3 = _client_for_endpoint(s3_endpoint)
+    return s3.generate_presigned_url('get_object',
+        Params={
+            'Bucket': config['S3_ARCHIVE_BUCKET'],
+            'Key': f"{config['S3_ARCHIVE_PATH']}{filename}"
+        },
+        ExpiresIn=expiry
+    )
