@@ -54,6 +54,9 @@ class PBW(object):
                 raise Exception("Bundle does not exist: " + pbw)
 
             self.path = bundle_abs_path
+
+            with open(bundle_abs_path, "rb") as fh:
+                bundle = io.BytesIO(fh.read())
         else:
             bundle = io.BytesIO(pbw)
 
