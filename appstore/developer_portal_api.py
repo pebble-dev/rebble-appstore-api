@@ -773,7 +773,7 @@ def download_archive():
     uid = get_uid() # unused, does auth so AI scrapers don't waste all our bandwidth, though
     
     archive = AvailableArchive.query.order_by(AvailableArchive.created_at.desc()).limit(1).one()
-    return redirect(get_link_for_archive(archive.filename))
+    return jsonify(success=True, url=get_link_for_archive(archive.filename))
 
 def init_app(app, url_prefix='/api/dp'):
     global parent_app
