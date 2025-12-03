@@ -28,4 +28,8 @@ config = {
     'AWS_SECRET_KEY': os.environ.get('AWS_SECRET_KEY', None),
     'S3_ENDPOINT': os.environ.get('S3_ENDPOINT', None),
     'TEST_APP_UUID': os.environ.get('TEST_APP_UUID', None),
+    'DISCOURSE_USER': os.environ.get('DISCOURSE_USER', 'annedroid'),
+    'DISCOURSE_API_KEY': os.environ.get('DISCOURSE_API_KEY', None),
+    'DISCOURSE_HOST': os.environ.get('DISCOURSE_HOST', f'forums.{domain_root}'),
+    'DISCOURSE_SHOWCASE_TOPIC_ID': int(os.environ.get('DISCOURSE_SHOWCASE_TOPIC_ID', '3')),
 }

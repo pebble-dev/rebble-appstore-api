@@ -17,8 +17,8 @@ from .models import db, App, Developer, Release, AssetCollection, AvailableArchi
 from .pbw import PBW, release_from_pbw
 from .s3 import upload_pbw, upload_asset, get_link_for_archive
 from .settings import config
-from .discord import announce_release, announce_new_app, audit_log
-
+from .discord import audit_log
+from . import discord, discourse
 
 parent_app = None
 devportal_api = Blueprint('devportal_api', __name__)
@@ -205,10 +205,16 @@ def submit_new_app():
             algolia_index.partial_update_objects([algolia_app(app_obj)], { 'createIfNotExists': True })
 
         try:
-            announce_new_app(app_obj, pbw.is_generated())
-        except Exception:
+            discord.announce_new_app(app_obj, pbw.is_generated())
+        except Exception as e:
             # We don't want to fail just because Discord is being weird
-            print("Discord is being weird")
+            print("Discord is being weird: {repr(e)}")
+
+        try:
+            discourse.announce_new_app(app_obj, pbw.is_generated())
+        except Exception as e:
+            # We don't want to fail just because Discourse is being weird
+            print("Discourse is being weird: {repr(e)}")
 
         return jsonify(success=True, id=app_obj.id)
 
@@ -344,10 +350,16 @@ def submit_new_release(app_id):
     db.session.commit()
 
     try:
-        announce_release(app, release_new, pbw.is_generated())
-    except Exception:
+        discord.announce_release(app, release_new, pbw.is_generated())
+    except Exception as e:
         # We don't want to fail just because Discord webhook is being weird
-        print("Discord is being weird")
+        print("Discord is being weird: {repr(e)}")
+
+    try:
+        discourse.announce_release(app, release_new, pbw.is_generated())
+    except Exception as e:
+        # We don't want to fail just because Discourse webhook is being weird
+        print(f"Discourse is being weird: {repr(e)}")
 
     return jsonify(success=True)
 

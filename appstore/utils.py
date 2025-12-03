@@ -13,6 +13,7 @@ from flask import request, abort, url_for
 
 import beeline
 
+import appstore # break the circular dependency to import get_topic_url_for_app from discourse
 from .settings import config
 from appstore.models import App, AssetCollection, CompanionApp
 
@@ -158,6 +159,7 @@ def jsonify_app(app: App, target_hw: str) -> dict:
         },
         'published_date': app.published_date,
         'visible': app.visible,
+        'discourse_url': appstore.discourse.get_topic_url_for_app(app),
     }
     if release:
         result['latest_release'] = {
