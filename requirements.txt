@@ -17,12 +17,13 @@ python-dateutil==2.7.3
 python-editor==1.0.3
 requests==2.27.1
 six==1.15.0
-SQLAlchemy==1.2.8
+SQLAlchemy==1.4.54
 urllib3==1.23
 Werkzeug==0.16.1
 boto3==1.9.169
 PyYAML==5.1.2
 Pillow==8.4
+pydiscourse==1.1.2
 
 # for serving
 gunicorn==20.1.0
@@ -45,3 +46,7 @@ statsd==3.3.0
 uritemplate==4.1.1
 Werkzeug==0.16.1
 wrapt==1.14.1
+importlib-metadata==4.8.3
+greenlet==2.0.2
+typing-extensions==4.1.1
+zipp==3.6.0
