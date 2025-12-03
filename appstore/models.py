@@ -78,6 +78,7 @@ class App(db.Model):
     visible = db.Column(db.Boolean, default=True, server_default='TRUE', nullable=False)
     timeline_token = db.Column(db.String, index=True)
     installs = db.Column(db.Integer, index=True)
+    discourse_topic_id = db.Column(db.Integer)
 
 
 category_banner_apps = Table('category_banner_apps', db.Model.metadata,
