@@ -5,6 +5,15 @@ from .models import App, db
 from .discord import random_party_emoji
 from .utils import get_app_description, generate_image_url
 
+PLATFORM_EMOJI = {
+    'aplite': ':pebble-orange:',
+    'basalt': ':pebble-time-red:',
+    'chalk': 'pebble-time-round-14-rainbow',
+    'diorite': 'pebble-2-aqua',
+    'emery': 'core-time-2-red',
+    'flint': 'core-2-duo-black'
+}
+
 if config['DISCOURSE_API_KEY'] is None:
     _client = None
 else:
@@ -46,11 +55,38 @@ def _create_or_post_to_topic(app, is_generated, text):
     else:
         _client.create_post(text, category_id=config['DISCOURSE_SHOWCASE_TOPIC_ID'], topic_id=app.discourse_topic_id)
 
+def banner(app):
+    asset_collections = app.asset_collections
+    for platform in asset_collections:
+        banner = asset_collections[platform].banner
+        if banner:
+            return f"![App banner]({generate_image_url(banner)})"
+    return ''
+
+def screenshot_section(app):
+    asset_collections = app.asset_collections
+    output = ''
+    # TODO: Make the order here more intentional
+    for index, platform in enumerate(asset_collections):
+        if len(asset_collections[platform].screenshots) > 0:
+            screenshots = asset_collections[platform].screenshots
+            output += f"### {PLATFORM_EMOJI[platform]} {platform.title()} screenshots:\n\n"
+            if index != 0:
+                output += '[details="Expand"]'
+            output += f"|{''.join(['|' for screenshot in screenshots])}\n"
+            output += f"|{''.join(['-|' for screenshot in screenshots])}\n"
+            screenshot_section = ''.join([f"![Screenshot {s_index}]({generate_image_url(screenshot)})|" for s_index, screenshot in enumerate(screenshots)])
+            output += f"|{screenshot_section}\n"
+            if index != 0:
+                output += '[/details]'
+            output += "\n\n"
+    return output
+
 def announce_release(app, release, is_generated):
     _create_or_post_to_topic(app, is_generated, text=f"""
 # {random_party_emoji()} Update alert!
 
-{app.developer.name} just released *version *{release.version}** of **{app.title}**!
+:party: {app.developer.name} just released *version *{release.version}** of **{app.title}**!
 
 [Go check it out!]({config['APPSTORE_ROOT']}/application/{app.id})
 
@@ -62,19 +98,21 @@ def announce_release(app, release, is_generated):
 
 def announce_new_app(app, is_generated):
     _create_or_post_to_topic(app, is_generated, text=f"""
+{banner(app)}
+
 # {app.title} by {app.developer.name}
 
-There's a new {app.type} on the Rebble App Store!
+:party: There's a new {app.type} on the Rebble App Store!
 
-{app.developer.name} says:
-
-{_md_quotify(get_app_description(app))}
+[quote=\"{app.developer.name} says\"]
+{get_app_description(app)}
+[/quote]
 
 [Go check it out in the App Store!]({config['APPSTORE_ROOT']}/application/{app.id})
 
-![App icon]({generate_image_url(app.icon_large)})
+{screenshot_section(app)}
 
-*P.S.: I'm just a helpful robot that posted this.  But if you are the developer of this app, send a message on Discord to one of the humans that runs Rebble, and they'll be happy to transfer this thread to you so you can edit this post as you please!*
+###### *P.S.: I'm just a helpful robot that posted this.  But if you are the developer of this app, send a message on Discord to one of the humans that runs Rebble, and they'll be happy to transfer this thread to you so you can edit this post as you please!*
 """)
 
 def get_topic_url_for_app(app):
