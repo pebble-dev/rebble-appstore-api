@@ -138,6 +138,7 @@ def import_apps(app_type):
             },
             created_at=parse_datetime(app['created_at']),
             developer=dev,
+            discourse_topic_id=0,
             hearts=app['hearts'],
             releases=[
                 *([Release(
@@ -305,6 +306,7 @@ def import_app_from_locker(locker_app):
         title=locker_app['title'],
         type=locker_app['type'],
         website=None,
+        discourse_topic_id=0,
         visible=False,
     )
     db.session.add(app)

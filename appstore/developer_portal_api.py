@@ -177,6 +177,7 @@ def submit_new_app():
             companions={}, # companions not supported yet
             created_at=datetime.datetime.utcnow(),
             developer=developer,
+            discourse_topic_id=0,
             hearts=0,
             releases=[],
             icon_large=upload_asset(request.files['large_icon'], request.files["large_icon"].content_type),

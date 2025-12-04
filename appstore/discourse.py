@@ -28,12 +28,12 @@ def _create_or_post_to_topic(app, is_generated, text):
         # should go in their own topic later?
         return
 
-    if app.discourse_topic_id is -1:
+    if app.discourse_topic_id == -1:
         # We have manually set that we don't want a Discourse topic at all
         # for this app.  Don't post at all.
         return
 
-    if app.discourse_topic_id is None:
+    if app.discourse_topic_id == 0:
         # This app doesn't have a topic of its own yet; create a new one,
         # and store it in the database.
         
