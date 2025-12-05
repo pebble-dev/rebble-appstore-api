@@ -8,10 +8,10 @@ from .utils import get_app_description, generate_image_url
 PLATFORM_EMOJI = {
     'aplite': ':pebble-orange:',
     'basalt': ':pebble-time-red:',
-    'chalk': 'pebble-time-round-14-rainbow',
-    'diorite': 'pebble-2-aqua',
-    'emery': 'core-time-2-red',
-    'flint': 'core-2-duo-black'
+    'chalk': ':pebble-time-round-14-rainbow:',
+    'diorite': ':pebble-2-aqua:',
+    'emery': ':core-time-2-red:',
+    'flint': ':core-2-duo-black:'
 }
 
 if config['DISCOURSE_API_KEY'] is None:
@@ -72,7 +72,7 @@ def screenshot_section(app):
             screenshots = asset_collections[platform].screenshots
             output += f"### {PLATFORM_EMOJI[platform]} {platform.title()} screenshots:\n\n"
             if index != 0:
-                output += '[details="Expand"]'
+                output += "[details=\"Expand\"]\n"
             output += f"|{''.join(['|' for screenshot in screenshots])}\n"
             output += f"|{''.join(['-|' for screenshot in screenshots])}\n"
             screenshot_section = ''.join([f"![Screenshot {s_index}]({generate_image_url(screenshot)})|" for s_index, screenshot in enumerate(screenshots)])
