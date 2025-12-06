@@ -2,7 +2,7 @@ import json
 import datetime
 import secrets
 
-from algoliasearch import algoliasearch
+#from algoliasearch import algoliasearch
 from flask import Blueprint, jsonify, abort, request, redirect
 from flask_cors import CORS
 
@@ -684,7 +684,7 @@ def update_app_forum_url(app_id):
         return jsonify(error="Invalid URL for new discourse topic", e="url.invalid"), 400
 
     if not user_owns_discourse_topic(req["new_url"]):
-        return jsonify(error="You are not the creator of the provided discourse topic", e="url.permissions.missing")
+        return jsonify(error="You are not the creator of the provided discourse topic", e="url.permissions.missing"), 400
 
     app.discourse_topic_id = topic_url_to_id(req["new_url"])
     db.session.commit()
