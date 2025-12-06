@@ -1,12 +1,13 @@
 import os
 import io
-import requests
 
 from flask import Flask
 from PIL import Image, ImageDraw, ImageFont, ImageChops
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from math import ceil
 
-from .utils import valid_platforms
+from .s3 import download_asset
+from .utils import valid_platforms, plat_dimensions
 
 parent_app = None
 
@@ -69,15 +70,32 @@ def preferred_grouping(platforms):
       if len(selection) == len(selection & platforms):
         return selection
 
-def load_image_from_url(url, fallback):
+def load_image_from_id(id, fallback):
     try:
-        resp = requests.get(url, timeout=5)
-        resp.raise_for_status()
-        return Image.open(io.BytesIO(resp.content)).convert("RGBA")
+        file = io.BytesIO()
+        download_asset(id, file)
+        return Image.open(file).convert("RGBA")
     except Exception as e:
         if fallback:
             return fallback
         raise e
+
+def load_images_parallel(ids_with_fallbacks):
+    output = {}
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        future_to_key = {
+            executor.submit(load_image_from_id, id, fallback): key
+            for key, (id, fallback) in ids_with_fallbacks.items()
+        }
+
+        for future in as_completed(future_to_key):
+            key = future_to_key[future]
+            try:
+                output[key] = future.result()
+            except Exception as e:
+                output[key] = None
+
+    return output
 
 def draw_text_ellipsized(draw, text, font, xy, max_width):
     if draw.textlength(text, font=font) <= max_width:
@@ -96,17 +114,17 @@ def draw_text_ellipsized(draw, text, font, xy, max_width):
 
     draw.text(xy, trimmed + ellipsis, font=font, fill=text_color)
 
-def platform_image_in_border(canvas, image_url, top_left, platform):
+def platform_image_in_border(canvas, image, top_left, platform):
     border = platform_borders[platform]
-    img = load_image_from_url(image_url, border['fallback'])
+    image = image.resize(plat_dimensions[platform], resample=Image.NEAREST)
 
     if platform == 'chalk':
-        img.putalpha(chalk_mask)
+        image.putalpha(chalk_mask)
 
     ix = top_left[0] + border['offset'][0]
     iy = top_left[1] + border['offset'][1]
 
-    canvas.alpha_composite(img, (ix, iy))
+    canvas.alpha_composite(image, (ix, iy))
 
     canvas.alpha_composite(border['image'], top_left)
 
@@ -117,10 +135,20 @@ def generate_preview_image(title, developer, icon, screenshots):
     platforms = preferred_grouping(screenshots.keys())
     start_x = ceil((canvas.width - sum(platform_borders[platform]['image'].width for platform in platforms)) / 2)
 
+    image_ids = {}
+
+    if icon:
+        image_ids['icon'] = (icon, None)
+
+    for platform in platforms:
+        image_ids[platform] = (screenshots[platform], platform_borders[platform]['fallback'])
+
+    loaded_images = load_images_parallel(image_ids)
+
     for platform in platforms:
         platform_image_in_border(
             canvas=canvas,
-            image_url=screenshots[platform],
+            image=loaded_images[platform],
             top_left=(start_x, 0),
             platform=platform
         )
@@ -130,13 +158,10 @@ def generate_preview_image(title, developer, icon, screenshots):
     author_position = base_author_position
     text_space = base_text_space
 
-    icon_image = None
-    try:
-        icon_image = load_image_from_url(icon, None)
-    except Exception as e:
-        icon_image = None
+    icon_image = loaded_images['icon'] if 'icon' in loaded_images else None
 
     if icon_image:
+        icon_image = icon_image.resize((80,80))
         icon_image.putalpha(ImageChops.multiply(icon_mask, icon_image.split()[3]))
         canvas.alpha_composite(icon_image, icon_position)
         title_position = (title_position[0] + 88, title_position[1])

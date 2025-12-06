@@ -76,11 +76,11 @@ def app_image_by_id(key):
         if hw in app.asset_collections:
             screenshot = app.asset_collections[hw].screenshots[0]
             if screenshot:
-              screenshots[hw] = generate_image_url(screenshot, *plat_dimensions[hw], True)
+              screenshots[hw] = screenshot
 
     icon = None
     if app.type == 'watchapp':
-        icon = generate_image_url(app.icon_large, 80, 80, True)
+        icon = app.icon_large
     png = generate_preview_image(title=app.title, developer=app.developer.name, icon=icon, screenshots=screenshots)
     response = make_response(png)
     response.headers.set('Content-Type', 'image/png')
