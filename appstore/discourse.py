@@ -8,10 +8,10 @@ from .utils import get_app_description, generate_image_url
 PLATFORM_EMOJI = {
     'aplite': ':pebble-orange:',
     'basalt': ':pebble-time-red:',
-    'chalk': 'pebble-time-round-14-rainbow',
-    'diorite': 'pebble-2-aqua',
-    'emery': 'core-time-2-red',
-    'flint': 'core-2-duo-black'
+    'chalk': ':pebble-time-round-14-rainbow:',
+    'diorite': ':pebble-2-aqua:',
+    'emery': ':core-time-2-red:',
+    'flint': ':core-2-duo-black:'
 }
 
 if config['DISCOURSE_API_KEY'] is None:
@@ -53,6 +53,7 @@ def _create_or_post_to_topic(app, is_generated, text):
 
         App.query.filter_by(app_uuid=app.app_uuid).update({'discourse_topic_id': rv['topic_id']})
         db.session.commit()
+        app.discourse_topic_id = rv['topic_id']
     else:
         _client.create_post(text, category_id=config['DISCOURSE_SHOWCASE_TOPIC_ID'], topic_id=app.discourse_topic_id)
 
@@ -73,7 +74,7 @@ def screenshot_section(app):
             screenshots = asset_collections[platform].screenshots
             output += f"### {PLATFORM_EMOJI[platform]} {platform.title()} screenshots:\n\n"
             if index != 0:
-                output += '[details="Expand"]'
+                output += "[details=\"Expand\"]\n"
             output += f"|{''.join(['|' for screenshot in screenshots])}\n"
             output += f"|{''.join(['-|' for screenshot in screenshots])}\n"
             screenshot_section = ''.join([f"![Screenshot {s_index}]({generate_image_url(screenshot)})|" for s_index, screenshot in enumerate(screenshots)])
@@ -84,6 +85,9 @@ def screenshot_section(app):
     return output
 
 def announce_release(app, release, is_generated):
+    if app.discourse_topic_id == 0:
+        announce_new_app(app, is_generated, is_new=False)
+
     _create_or_post_to_topic(app, is_generated, text=f"""
 # {random_party_emoji()} Update alert!
 
@@ -97,13 +101,13 @@ def announce_release(app, release, is_generated):
 
 """)
 
-def announce_new_app(app, is_generated):
+def announce_new_app(app, is_generated, is_new=True):
     _create_or_post_to_topic(app, is_generated, text=f"""
 {banner(app)}
 
 # {app.title} by {app.developer.name}
 
-:party: There's a new {app.type} on the Rebble App Store!
+:party: There's {"a new" if is_new else "another cool"} {app.type} on the Rebble App Store!
 
 [quote=\"{app.developer.name} says\"]
 {get_app_description(app)}
