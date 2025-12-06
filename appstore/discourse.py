@@ -16,6 +16,7 @@ PLATFORM_EMOJI = {
 
 if config['DISCOURSE_API_KEY'] is None:
     _client = None
+    print("== Discourse Integration not configured.")
 else:
     _client = DiscourseClient(host=f"https://{config['DISCOURSE_HOST']}", api_username=config['DISCOURSE_USER'], api_key=config['DISCOURSE_API_KEY'])
 
@@ -116,6 +117,7 @@ def announce_new_app(app, is_generated):
 """)
 
 def get_topic_url_for_app(app):
-    if not _client or not app.discourse_topic_id or app.discourse_topic_id == -1:
-        return None
-    return f"https://{config['DISCOURSE_HOST']}/t/{app.discourse_topic_id}"
+    if app.discourse_topic_id > 0:
+        return f"https://{config['DISCOURSE_HOST']}/t/{app.discourse_topic_id}"
+    else:
+        return
