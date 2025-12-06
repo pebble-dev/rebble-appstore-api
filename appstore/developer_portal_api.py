@@ -18,6 +18,7 @@ from .pbw import PBW, release_from_pbw
 from .s3 import upload_pbw, upload_asset, get_link_for_archive
 from .settings import config
 from .discord import audit_log
+from .discourse import get_topic_url_for_app, is_valid_topic_url, user_owns_discourse_topic, topic_url_to_id
 from . import discord, discourse
 
 parent_app = None
@@ -648,6 +649,47 @@ def new_app_icon(app_id, size):
     db.session.commit()
 
     return jsonify(success=True, id=new_image_id, size=size)
+
+@devportal_api.route("/app/<app_id>/forum", methods=['GET'])
+def get_app_forum_url(app_id):
+    try:
+        app = App.query.filter(App.id == app_id).one()
+    except NoResultFound:
+        return jsonify(error="Unknown app", e="app.notfound"), 404
+
+    return jsonify(forum_url=get_topic_url_for_app(app))
+
+@devportal_api.route("/app/<app_id>/forum", methods=['POST'])
+def update_app_forum_url(app_id):
+    try:
+        req = request.json
+    except BadRequest:
+        return jsonify(error="Invalid POST body. Expected JSON", e="body.invalid"), 400
+
+    if req is None:
+        return jsonify(error="Invalid POST body. Expected JSON and 'Content-Type: application/json'", e="request.invalid"), 400
+
+    if "new_url" not in req:
+        return jsonify(error="Missing required field: new_url", e="missing.field.new_url"), 400
+
+    try:
+        app = App.query.filter(App.id == app_id).one()
+    except NoResultFound:
+        return jsonify(error="Unknown app", e="app.notfound"), 404
+
+    if not is_users_developer_id(app.developer_id):
+        return jsonify(error="You do not have permission to modify that app", e="permission.denied"), 403
+
+    if not is_valid_topic_url(req["new_url"]):
+        return jsonify(error="Invalid URL for new discourse topic", e="url.invalid"), 400
+
+    if not user_owns_discourse_topic(req["new_url"]):
+        return jsonify(error="You are not the creator of the provided discourse topic", e="url.permissions.missing")
+
+    app.discourse_topic_id = topic_url_to_id(req["new_url"])
+    db.session.commit()
+
+    return jsonify(success=True, new_url=app.discourse_topic_id)
 
 
 
