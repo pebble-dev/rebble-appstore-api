@@ -3,7 +3,9 @@ from pydiscourse.client import DiscourseClient
 from .settings import config
 from .models import App, db
 from .discord import random_party_emoji
-from .utils import get_app_description, generate_image_url
+from .utils import get_app_description, generate_image_url, demand_authed_request
+import requests
+import json
 
 PLATFORM_EMOJI = {
     'aplite': ':pebble-orange:',
@@ -16,6 +18,7 @@ PLATFORM_EMOJI = {
 
 if config['DISCOURSE_API_KEY'] is None:
     _client = None
+    print("== Discourse Integration not configured.")
 else:
     _client = DiscourseClient(host=f"https://{config['DISCOURSE_HOST']}", api_username=config['DISCOURSE_USER'], api_key=config['DISCOURSE_API_KEY'])
 
@@ -120,6 +123,45 @@ def announce_new_app(app, is_generated, is_new=True):
 """)
 
 def get_topic_url_for_app(app):
-    if not _client or not app.discourse_topic_id or app.discourse_topic_id == -1:
-        return None
-    return f"https://{config['DISCOURSE_HOST']}/t/{app.discourse_topic_id}"
+    if app.discourse_topic_id > 0:
+        return f"https://{config['DISCOURSE_HOST']}/t/{app.discourse_topic_id}"
+    else:
+        return
+
+def is_valid_topic_url(topic_url):
+    topic_url = topic_url.lower().strip()
+
+    start_string = config['DISCOURSE_HOST'].lower()
+    if not start_string.startswith("http://"):
+        start_string = "https://" + start_string
+
+    return topic_url.startswith(start_string)
+
+def topic_url_to_id(topic_url):
+    topic_url = topic_url.lower().strip()
+    if "?" in topic_url:
+        topic_url = topic_url[:topic_url.index("?")]
+    sections = topic_url.split("/")
+
+    if len(sections) == 5:
+        # Short url: https://discourse.example.com/t/12345
+        return int(sections[4])
+    else:
+        # Long url: https://discourse.example.com/t/topic-title/12345
+        # Long url with page: https://discourse.example.com/t/topic-title/12345/2
+        return int(sections[5])
+
+def fetch_owner_from_topic_url(topic_url):
+    #The py client sucks a bit so we'll just call the JSON
+    topic = requests.request("GET", topic_url + ".json").json()
+    topic_owner = topic["details"]["created_by"]["username"]
+    return topic_owner
+
+def user_owns_discourse_topic(discourse_topic_url):
+    discourse_username = fetch_owner_from_topic_url(discourse_topic_url)
+
+    auth_result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me/pebble/appstore")
+    me = auth_result.json()
+    my_username = me["rebble_username"]
+
+    return discourse_username == my_username
