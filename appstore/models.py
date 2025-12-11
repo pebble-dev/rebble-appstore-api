@@ -79,6 +79,7 @@ class App(db.Model):
     timeline_token = db.Column(db.String, index=True)
     installs = db.Column(db.Integer, index=True)
     discourse_topic_id = db.Column(db.Integer)
+    preview_image = db.Column(db.String)
 
 
 category_banner_apps = Table('category_banner_apps', db.Model.metadata,
