@@ -4,6 +4,7 @@ import random
 
 from .settings import config
 from .utils import get_app_description, generate_image_url, who_am_i
+from .discourse import get_topic_url_for_app
 
 party_time_emoji = ["🎉","🥳","👏","❤️","🥰","🎊"]
 
@@ -18,6 +19,19 @@ def announce_release(app, release, is_generated):
         release_notes = release.release_notes
         if not release_notes:
             release_notes = "N/A"
+        
+        request_fields = [{
+            "name": "Release Notes",
+            "value": release_notes
+        }]
+
+        topic_url = get_topic_url_for_app(app)
+        if topic_url:
+            request_fields.append({
+                "name": "Discuss it on the Rebble Dev Forum!",
+                "value": topic_url
+            })
+
 
         request_data = {
             "embeds": [{
@@ -29,12 +43,7 @@ def announce_release(app, release, is_generated):
                     "width": 80
                 },
                 "description": f"{app.developer.name} just updated their {app.type} *{app.title}* to version {release.version}!",
-                "fields": [
-                    {
-                        "name": "Release Notes",
-                        "value": release_notes
-                    }
-                ]
+                "fields": request_fields
             }]
         }
 
@@ -76,6 +85,13 @@ def announce_new_app(app, is_generated):
                     "name": "Website",
                     "value": app.website
                 })
+    
+    topic_url = get_topic_url_for_app(app)
+    if topic_url:
+        request_fields.append({
+            "name": "Discuss it on the Rebble Dev Forum!",
+            "value": topic_url
+        })
 
     txt_type = app.type if not is_generated else "Generated Watchface"
 
