@@ -4,7 +4,7 @@ import random
 
 from .settings import config
 from .utils import get_app_description, generate_image_url, who_am_i
-from .discourse import get_topic_url_for_app
+import appstore # break the circular dependency to import get_topic_url_for_app from discourse
 
 party_time_emoji = ["🎉","🥳","👏","❤️","🥰","🎊"]
 
@@ -25,7 +25,7 @@ def announce_release(app, release, is_generated):
             "value": release_notes
         }]
 
-        topic_url = get_topic_url_for_app(app)
+        topic_url = appstore.discourse.get_topic_url_for_app(app)
         if topic_url:
             request_fields.append({
                 "name": "Discuss it on the Rebble Dev Forum!",
@@ -86,7 +86,7 @@ def announce_new_app(app, is_generated):
                     "value": app.website
                 })
     
-    topic_url = get_topic_url_for_app(app)
+    topic_url = appstore.discourse.get_topic_url_for_app(app)
     if topic_url:
         request_fields.append({
             "name": "Discuss it on the Rebble Dev Forum!",
