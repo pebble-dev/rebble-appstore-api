@@ -1,6 +1,8 @@
 import os
 import io
 
+import beeline
+
 from flask import Flask
 from PIL import Image, ImageDraw, ImageFont, ImageChops
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -143,8 +145,11 @@ def generate_preview_image(title, developer, icon, screenshots):
     for platform in platforms:
         image_ids[platform] = (screenshots[platform], platform_borders[platform]['fallback'])
 
+    span = beeline.start_span(context = { "name": "load_images" })
     loaded_images = load_images_parallel(image_ids)
+    beeline.finish_span(span)
 
+    span = beeline.start_span(context = { "name": "render_images" })
     for platform in platforms:
         platform_image_in_border(
             canvas=canvas,
@@ -167,13 +172,22 @@ def generate_preview_image(title, developer, icon, screenshots):
         title_position = (title_position[0] + 88, title_position[1])
         author_position = (author_position[0] + 88, author_position[1])
         text_space -= 88
+    beeline.finish_span(span)
 
+    span = beeline.start_span(context = { "name": "render_text" })
     draw_text_ellipsized(draw, title, font_large, title_position, text_space)
     draw_text_ellipsized(draw, developer, font_small, author_position, text_space)
+    beeline.finish_span(span)
 
-    buffer = io.BytesIO()
-    canvas.save(buffer, format='PNG')
-    buffer.seek(0)
+    span = beeline.start_span(context = { "name": "encode_png" })
+
+    try:
+        buffer = io.BytesIO()
+        canvas.save(buffer, format='PNG')
+        buffer.seek(0)
+    finally:
+        beeline.finish_span(span)
+
     return buffer.getvalue()
 
 def init_app(app):
