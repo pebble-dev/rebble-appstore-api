@@ -207,16 +207,16 @@ def submit_new_app():
             algolia_index.partial_update_objects([algolia_app(app_obj)], { 'createIfNotExists': True })
 
         try:
-            discord.announce_new_app(app_obj, pbw.is_generated())
-        except Exception as e:
-            # We don't want to fail just because Discord is being weird
-            print("Discord is being weird: {repr(e)}")
-
-        try:
             discourse.announce_new_app(app_obj, pbw.is_generated())
         except Exception as e:
             # We don't want to fail just because Discourse is being weird
             print("Discourse is being weird: {repr(e)}")
+
+        try:
+            discord.announce_new_app(app_obj, pbw.is_generated())
+        except Exception as e:
+            # We don't want to fail just because Discord is being weird
+            print("Discord is being weird: {repr(e)}")
 
         return jsonify(success=True, id=app_obj.id)
 
