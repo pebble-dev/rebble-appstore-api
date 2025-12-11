@@ -450,6 +450,9 @@ def new_app_screenshots(app_id, platform):
     new_image_id = upload_asset(new_image, new_image.content_type)
     screenshots.append(new_image_id)
     asset_collection.screenshots = screenshots
+
+    # Invalidate the cached preview.
+    app.preview_image = None
     db.session.commit()
 
     return jsonify(success=True, id=new_image_id, platform=platform)
@@ -485,6 +488,10 @@ def delete_screenshot(app_id, platform, screenshot_id):
         ), 409
 
     asset_collection.screenshots = list(filter(lambda x: x != screenshot_id, asset_collection.screenshots))
+
+    # Invalidate the cached preview.
+    app.preview_image = None
+
     db.session.commit()
     return jsonify(success=True, message=f"Deleted screenshot {screenshot_id}", id=screenshot_id, platform=platform)
         
@@ -551,6 +558,10 @@ def new_app_banner(app_id, platform):
     new_image_id = upload_asset(new_image, new_image.content_type)
     headers.append(new_image_id)
     asset_collection.headers = headers
+
+    # Invalidate the cached preview.
+    app.preview_image = None
+
     db.session.commit()
 
     return jsonify(success=True, id=new_image_id, platform=platform)
@@ -586,6 +597,10 @@ def delete_banner(app_id, platform, banner_id):
         ), 409
 
     asset_collection.headers = list(filter(lambda x: x != banner_id, asset_collection.headers))
+
+    # Invalidate the cached preview.
+    app.preview_image = None
+
     db.session.commit()
     return jsonify(success=True, message=f"Deleted banner {banner_id}", id=banner_id, platform=platform)
         
@@ -646,6 +661,9 @@ def new_app_icon(app_id, size):
         app.icon_large = new_image_id
     elif size == "small":
         app.icon_small = new_image_id
+    
+    # Invalidate the cached preview.
+    app.preview_image = None
     db.session.commit()
 
     return jsonify(success=True, id=new_image_id, size=size)

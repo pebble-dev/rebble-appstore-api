@@ -1,3 +1,4 @@
+import io
 import urllib.parse
 
 from flask import Blueprint, request, jsonify, abort, url_for, make_response
@@ -5,11 +6,14 @@ from flask_cors import CORS
 from sqlalchemy import and_
 
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.exc import PendingRollbackError
 
 from appstore.utils import jsonify_app, asset_fallback, generate_image_url, get_access_token, plat_dimensions, HARDWARE_SUPPORT
 from .models import App, Collection, HomeBanners, Category, db, Release
 from .settings import config
 from .image import generate_preview_image
+
+from .s3 import upload_asset, download_asset
 
 parent_app = None
 api = Blueprint('api', __name__)
@@ -71,18 +75,44 @@ def apps_by_id(key):
 @api.route('/apps/id/<key>/preview')
 def app_image_by_id(key):
     app = App.query.filter_by(id=key).one_or_none()
-    screenshots = {}
-    for hw in ['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint']:
-        if hw in app.asset_collections:
-            screenshot = app.asset_collections[hw].screenshots[0]
-            if screenshot:
-              screenshots[hw] = screenshot
+    
+    if not app.preview_image:
+        # Guess we will have to generate one.
+        screenshots = {}
+        for hw in ['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint']:
+            if hw in app.asset_collections:
+                screenshot = app.asset_collections[hw].screenshots[0]
+                if screenshot:
+                  screenshots[hw] = screenshot
 
-    icon = None
-    if app.type == 'watchapp':
-        icon = app.icon_large
-    png = generate_preview_image(title=app.title, developer=app.developer.name, icon=icon, screenshots=screenshots)
-    response = make_response(png)
+        icon = None
+        if app.type == 'watchapp':
+            icon = app.icon_large
+        png = generate_preview_image(title=app.title, developer=app.developer.name, icon=icon, screenshots=screenshots)
+        
+        buf = io.BytesIO()
+        buf.write(png)
+        buf.seek(0)
+        # HACK: upload_asset puts this in a print, which is only really valid for actual Files...
+        setattr(buf, 'name', "preview.png")
+        asset = upload_asset(buf, mime_type = 'image/png', path = config['S3_PREVIEW_PATH'])
+        
+        app.preview_image = asset
+        try:
+            db.session.commit()
+        except PendingRollbackError:
+            # if someone else gets to it at the same time, no big deal
+            pass
+        
+        response = make_response(png)
+        response.headers.set('Content-Type', 'image/png')
+        return response
+    
+    # looks like there's a cached version -- grab it!
+    buf = io.BytesIO()
+    download_asset(app.preview_image, buf, path = config['S3_PREVIEW_PATH'])
+    buf.seek(0)
+    response = make_response(buf.read())
     response.headers.set('Content-Type', 'image/png')
     return response
 

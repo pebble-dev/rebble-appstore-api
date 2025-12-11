@@ -18,6 +18,7 @@ config = {
     'S3_PATH': os.environ.get('S3_PATH', 'pbw/'),
     'S3_ASSET_BUCKET': os.environ.get('S3_ASSET_BUCKET', 'rebble-appstore-assets'),
     'S3_ASSET_PATH': os.environ.get('S3_ASSET_PATH', ''),
+    'S3_PREVIEW_PATH': os.environ.get('S3_PREVIEW_PATH', 'preview_images/'),
     'S3_ARCHIVE_BUCKET': os.environ.get('S3_ARCHIVE_BUCKET', 'rebble-archive'),
     'S3_ARCHIVE_PATH':   os.environ.get('S3_ARCHIVE_PATH'  , 'appstore/'),
     'HONEYCOMB_KEY': os.environ.get('HONEYCOMB_KEY', None),

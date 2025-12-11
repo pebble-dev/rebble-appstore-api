@@ -82,9 +82,9 @@ def download_pbw(id, file):
         s3.download_fileobj(config['S3_BUCKET'], filename, file)
 
 
-def upload_asset(file, mime_type = None):
+def upload_asset(file, mime_type = None, path = config['S3_ASSET_PATH']):
     id = id_generator.generate()
-    filename = f"{config['S3_ASSET_PATH']}{id}"
+    filename = f"{path}{id}"
 
     if isinstance(file, str):
         print(f"uploading file {file} to {config['S3_ASSET_BUCKET']}:{filename}")
@@ -110,8 +110,8 @@ def upload_asset(file, mime_type = None):
     
     return id    
 
-def download_asset(id, file):
-    filename = f"{config['S3_ASSET_PATH']}{id}"
+def download_asset(id, file, path = config['S3_ASSET_PATH']):
+    filename = f"{path}{id}"
     s3 = _client_for_endpoint(s3_endpoint)
     if isinstance(file, str):
         s3.download_file(config['S3_ASSET_BUCKET'], filename, file)
