@@ -66,6 +66,8 @@ class App(db.Model):
     developer_id = db.Column(db.String(24), db.ForeignKey('developers.id'))
     developer = db.relationship('Developer', lazy='joined')
     hearts = db.Column(db.Integer, index=True)
+    decaying_hearts = db.Column(db.Float, index=True)
+    random_weekly = db.Column(db.Integer, index=True)
     releases = db.relationship('Release', order_by=lambda: desc(Release.published_date), back_populates='app', lazy='selectin')
     icon_large = db.Column(db.String)
     icon_small = db.Column(db.String)
@@ -81,6 +83,46 @@ class App(db.Model):
     discourse_topic_id = db.Column(db.Integer)
     preview_image = db.Column(db.String)
 
+    @classmethod
+    def generate_random_weekly(cls):
+        seed = func.concat(
+            func.extract("year", func.current_date()),
+            func.extract("week", func.current_date()),
+            cast(cls.id, String)
+        )
+
+        random_value = (
+            ("x" + func.substr(func.md5(seed), 1, 8)).cast(Integer)
+        )
+
+        random_update = update(cls).values(random_weekly=random_value)
+        session.execute(random_update)
+        session.commit()
+
+    @classmethod
+    def generate_decaying_hearts(cls):
+        decay_cte = (
+            select(
+                UserLike.app_id,
+                func.sum(
+                    func.pow(
+                        0.9,
+                        func.cast(func.current_date(), Date) - func.cast(UserLike.created_at, Date)
+                    )
+                ).label("decay_sum")
+            )
+            .where(UserLike.created_at != None)
+            .group_by(UserLike.app_id)
+        ).cte("decay_cte")
+
+        decay_update = (
+            update(cls)
+            .values(decaying_hearts=decay_cte.c.decay_sum)
+            .where(cls.id == decay_cte.c.app_id)
+        )
+
+        session.execute(decay_update)
+        session.commit()
 
 category_banner_apps = Table('category_banner_apps', db.Model.metadata,
                              db.Column('category_id', db.String(24), db.ForeignKey('categories.id', ondelete='cascade')),
