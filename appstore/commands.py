@@ -771,5 +771,13 @@ def export_archive(output, upload, test):
         db.session.commit()
 
 
+@apps.command('random-weekly')
+def random_weekly():
+    App.generate_random_weekly()
+
+@apps.command('daily-hearts')
+def daily_hearts():
+    App.generate_recent_hearts()
+
 def init_app(app):
     app.cli.add_command(apps)

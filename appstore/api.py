@@ -27,6 +27,10 @@ def generate_app_response(results, sort_override=None):
     sorting = sort_override or request.args.get('sort', 'updated')
     if sorting == 'hearts':
         results = results.order_by(App.hearts.desc())
+    elif sorting == 'recent_hearts':
+        results = results.order_by(App.recent_hearts.desc())
+    elif sorting == 'random_weekly':
+        results = results.order_by(App.random_weekly.desc())
     else:
         results = results.order_by(App.id.desc())
     # This is slow-ish, but over our appstore size we don't really care.
@@ -148,11 +152,12 @@ def apps_by_collection(slug, app_type):
         apps = App.query.filter(App.type == app_type, ~generated_filter(), global_filter(hw))
     elif slug == 'most-loved':
         apps = App.query.filter(App.type == app_type, global_filter(hw))
-        sort_override = 'hearts'
+        sort_override = 'recent_hearts'
     elif slug == 'all-generated':
         apps = App.query.filter(App.type == app_type, generated_filter(), global_filter(hw))
     else:
         collection = Collection.query.filter_by(slug=slug).one_or_none()
+        sort_override = 'random_weekly'
         if collection is None:
             abort(404)
         apps = collection.apps.filter_by(type=app_type).filter(global_filter(hw))
@@ -247,7 +252,12 @@ def home(home_type):
         'collections': [*({
             'name': collection.name,
             'slug': collection.slug,
-            'application_ids': [x.id for x in collection.apps.distinct().limit(7)],
+            'application_ids': [
+                x.id for x in collection.apps
+                    .filter(App.type == app_type, global_filter(hw))
+                    .order_by(App.random_weekly.desc())
+                    .distinct()
+                    .limit(7)],
             'links': {
                 'apps': url_for('api.apps_by_collection', slug=collection.slug, app_type=home_type)
             },
@@ -257,7 +267,7 @@ def home(home_type):
             'application_ids': [
                 x.id for x in App.query
                     .filter(App.type == app_type, global_filter(hw))
-                    .order_by(App.hearts.desc())
+                    .order_by(App.recent_hearts.desc())
                     .distinct()
                     .limit(7)],
             'links': {
