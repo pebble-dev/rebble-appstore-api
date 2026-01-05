@@ -88,11 +88,11 @@ class App(db.Model):
         seed = db.func.concat(
             db.func.extract("year", db.func.current_date()),
             db.func.extract("week", db.func.current_date()),
-            cast(cls.id, String)
+            db.cast(cls.id, db.String)
         )
 
         random_value = (
-            ("x" + db.func.substr(db.func.md5(seed), 1, 8)).cast(Integer)
+            ("0x" + db.func.substr(db.func.md5(seed), 1, 6)).cast(db.Integer)
         )
 
         random_update = db.update(cls).values(random_weekly=random_value)
@@ -117,8 +117,13 @@ class App(db.Model):
 
         decay_update = (
             db.update(cls)
-            .values(recent_hearts=decay_cte.c.decay_sum)
-            .where(cls.id == decay_cte.c.app_id)
+              .values(
+                recent_hearts=(
+                    db.select(decay_cte.c.decay_sum)
+                    .where(decay_cte.c.app_id == cls.id)
+                    .scalar_subquery()
+                )
+            )
         )
 
         db.session.execute(decay_update)
