@@ -28,9 +28,9 @@ def generate_app_response(results, sort_override=None):
     if sorting == 'hearts':
         results = results.order_by(App.hearts.desc())
     elif sorting == 'recent_hearts':
-        results = results.order_by(App.recent_hearts.desc())
+        results = results.filter(App.recent_hearts!=None).order_by(App.recent_hearts.desc())
     elif sorting == 'random_weekly':
-        results = results.order_by(App.random_weekly.desc())
+        results = results.filter(App.random_weekly!=None).order_by(App.random_weekly.desc())
     else:
         results = results.order_by(App.id.desc())
     # This is slow-ish, but over our appstore size we don't really care.
@@ -254,7 +254,7 @@ def home(home_type):
             'slug': collection.slug,
             'application_ids': [
                 x.id for x in collection.apps
-                    .filter(App.type == app_type, global_filter(hw))
+                    .filter(App.type == app_type, App.random_weekly!=None, global_filter(hw))
                     .order_by(App.random_weekly.desc())
                     .distinct()
                     .limit(7)],
@@ -266,7 +266,7 @@ def home(home_type):
             'slug': 'most-loved',
             'application_ids': [
                 x.id for x in App.query
-                    .filter(App.type == app_type, global_filter(hw))
+                    .filter(App.type == app_type, App.recent_hearts!=None, global_filter(hw))
                     .order_by(App.recent_hearts.desc())
                     .distinct()
                     .limit(7)],
