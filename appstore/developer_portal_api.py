@@ -630,7 +630,7 @@ def get_app_icon(app_id, size):
 @devportal_api.route('/app/<app_id>/icon/<size>', methods=['POST'])
 def new_app_icon(app_id, size):
     if size not in ("large", "small"):
-        return jsonify(error="Invalid icon size. Expected 'small' or 'large'.", e="size.invalid"), 404    
+        return jsonify(error="Invalid icon size. Expected 'small' or 'large'.", e="size.invalid"), 404
 
     try:
         app = App.query.filter(App.id == app_id).one()
@@ -651,17 +651,21 @@ def new_app_icon(app_id, size):
     if not is_valid_image_file(new_image):
         return jsonify(error="Illegal image type", e="icon.illegalvalue"), 400
 
+    # Only apps are allowed to have smallicons, not watchfaces
+    if size == "small" and app.type == "watchface":
+        return jsonify(error="Watchfaces are not allowed small icons", e="icon.disallowed"), 400
+
     # Check it's the correct size
     if not is_valid_image_size(new_image, f"{size}_icon"):
         max_w, max_h = get_max_image_dimensions(f"{size}_icon")
         return jsonify(error="Invalid image size", e="icon.illegaldimensions", message=f"Image should be {max_w}x{max_h}"), 400
-        
+
     new_image_id = upload_asset(new_image, new_image.content_type)
     if size == "large":
         app.icon_large = new_image_id
     elif size == "small":
         app.icon_small = new_image_id
-    
+
     # Invalidate the cached preview.
     app.preview_image = None
     db.session.commit()
