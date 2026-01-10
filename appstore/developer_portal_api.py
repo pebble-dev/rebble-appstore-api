@@ -366,9 +366,6 @@ def submit_new_release(app_id):
 
 @devportal_api.route('/app/<app_id>/visibility', methods=['POST'])
 def set_app_visbility(app_id):
-    if not user_is_wizard():
-        return jsonify(error="This API is not public yet", e="permission.denied"), 403
-
     try:
         req = request.json
     except BadRequest:
