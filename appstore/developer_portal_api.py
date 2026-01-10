@@ -61,7 +61,7 @@ def create_developer():
 
         if "name" not in req:
             return jsonify(error="Missing required field: name", e="missing.field.name"), 400
-        
+
         try:
             dev = Developer.query.filter_by(id=me['id']).one()
             return jsonify(success=True, message="User is already on board")
@@ -106,12 +106,12 @@ def submit_new_app():
         appinfo_valid, appinfo_validation_error = is_valid_appinfo(appinfo)
         if not appinfo_valid:
             return jsonify(error=f"The appinfo.json in your pbw file has the following error: {appinfo_validation_error}", e="invalid.appinfocontent"), 400
-        
+
         if params["type"] == "watchface" and not appinfo["watchapp"]["watchface"]:
             return jsonify(error="You selected the app type 'Watchface'. This does not match the configuration in your appinfo.json", e="invalid.appinfocontent"), 400
         elif params["type"] == "watchapp" and appinfo["watchapp"]["watchface"]:
             return jsonify(error="You selected the app type 'Watch App'. This does not match the configuration in your appinfo.json", e="invalid.appinfocontent"), 400
-            
+
         # Check app doesn't already exist
         try:
             if App.query.filter(App.app_uuid == appinfo['uuid']).count() > 0:
@@ -219,7 +219,6 @@ def submit_new_app():
             print("Discord is being weird: {repr(e)}")
 
         return jsonify(success=True, id=app_obj.id)
-
 
 @devportal_api.route('/app/<app_id>', methods=['POST'])
 def update_app_fields(app_id):
@@ -337,8 +336,8 @@ def submit_new_release(app_id):
 
     if not first_version_is_newer(version, release_old.version):
         return jsonify(
-            error=f"The version ({version}) is already on the appstore", 
-            e="version.exists", 
+            error=f"The version ({version}) is already on the appstore",
+            e="version.exists",
             message="The app version in appinfo.json is not greater than the latest release on the store. Please increment versionLabel in your appinfo.json and try again."
             ), 400
 
@@ -365,6 +364,54 @@ def submit_new_release(app_id):
 
     return jsonify(success=True)
 
+@devportal_api.route('/app/<app_id>/visbility', methods=['POST'])
+def set_app_visbility(app_id):
+    if not user_is_wizard():
+        return jsonify(error="This API is not public yet", e="permission.denied"), 403
+
+    try:
+        req = request.json
+    except BadRequest:
+        return jsonify(error="Invalid POST body. Expected JSON", e="body.invalid"), 400
+
+    if req is None:
+        return jsonify(error="Invalid POST body. Expected JSON and 'Content-Type: application/json'", e="request.invalid"), 400
+
+    if "visibility" not in req:
+        return jsonify(error="Missing required field: visibility", e="missing.field.visibility"), 400
+
+    try:
+        app = App.query.filter(App.id == app_id).one()
+    except NoResultFound:
+        return jsonify(error="Unknown app", e="app.notfound"), 400
+
+    # Check we own the app
+    if not is_users_developer_id(app.developer_id):
+        return jsonify(error="You do not have permission to modify that app", e="permission.denied"), 403
+
+    if str(req["visibility"]).lower() == "public":
+
+        app.visible = True
+        algolia_index.partial_update_objects([algolia_app(app)], { 'createIfNotExists': True })
+        db.session.commit()
+        return jsonify(success=True, visibility="public")
+
+    elif str(req["visibility"]).lower() == "private":
+
+        # Delete the entry from Algolia
+        algolia_client.delete_object(
+                index_name=algolia_index,
+                object_id=app_id,
+        )
+
+        app.visible = False
+        db.session.commit()
+        return jsonify(success=True, visibility="private")
+
+    else:
+        return jsonify(error="Invalid value for field: visibility. Expected public or private", e="invalid.field.visibility"), 400
+
+
 @devportal_api.route('/app/<app_id>/timeline_token')
 def apps_timeline_token(app_id):
     try:
@@ -383,22 +430,22 @@ def apps_timeline_token(app_id):
 
     return jsonify(result)
 
-# Screenshots 
+# Screenshots
 @devportal_api.route('/app/<app_id>/screenshots')
 def missing_platform(app_id):
     return jsonify(error="Missing platform", e="platform.missing", message="Use /app/<id>/screenshots/<platform>"), 400
-    
+
 @devportal_api.route('/app/<app_id>/screenshots/<platform>', methods=['GET'])
 def get_app_screenshots(app_id, platform):
     # Check app exists
 
     if not is_valid_platform(platform):
-        return jsonify(error=f"Invalid platform: {platform}", e="platform.invalid"), 400  
+        return jsonify(error=f"Invalid platform: {platform}", e="platform.invalid"), 400
 
     try:
         app = App.query.filter(App.id == app_id).one()
     except NoResultFound:
-        return jsonify(error="Unknown app", e="app.notfound"), 400    
+        return jsonify(error="Unknown app", e="app.notfound"), 400
 
     asset_collection = AssetCollection.query.filter(AssetCollection.app_id == app.id, AssetCollection.platform == platform).one_or_none()
 
@@ -419,7 +466,7 @@ def new_app_screenshots(app_id, platform):
         return jsonify(error="You do not have permission to modify that app", e="permission.denied"), 403
 
     if not is_valid_platform(platform):
-        return jsonify(error=f"Invalid platform: {platform}", e="platform.invalid"), 400  
+        return jsonify(error=f"Invalid platform: {platform}", e="platform.invalid"), 400
 
     asset_collection = AssetCollection.query.filter(AssetCollection.app_id == app.id, AssetCollection.platform == platform).one_or_none()
 
@@ -437,7 +484,7 @@ def new_app_screenshots(app_id, platform):
     if not is_valid_image_size(new_image, f"screenshot_{platform}"):
         max_w, max_h = get_max_image_dimensions(f"screenshot_{platform}")
         return jsonify(error="Invalid image size", e="screenshots.illegaldimensions", message=f"Image should be {max_w}x{max_h}"), 400
-        
+
     if asset_collection is None:
         asset_collection = clone_asset_collection_without_images(app, platform)
         app.asset_collections[platform] = asset_collection
@@ -469,7 +516,7 @@ def delete_screenshot(app_id, platform, screenshot_id):
         return jsonify(error="You do not have permission to modify that app", e="permission.denied"), 403
 
     if not is_valid_platform(platform):
-        return jsonify(error=f"Invalid platform: {platform}", e="platform.invalid"), 400  
+        return jsonify(error=f"Invalid platform: {platform}", e="platform.invalid"), 400
 
     asset_collection = AssetCollection.query.filter(AssetCollection.app_id == app.id, AssetCollection.platform == platform).one_or_none()
 
@@ -482,8 +529,8 @@ def delete_screenshot(app_id, platform, screenshot_id):
     if len(asset_collection.screenshots) < 2:
         # Not sure what code to use here. It's not 400 as the request is valid. Don't want a 200. For now returning 409 Conflict
         return jsonify(
-            error="At least one screenshot required per platform", 
-            e="screenshot.islast", 
+            error="At least one screenshot required per platform",
+            e="screenshot.islast",
             message="Cannot delete the last screenshot as at least one screenshot is required per platform. Add another screenshot then retry the delete operation."
         ), 409
 
@@ -494,7 +541,7 @@ def delete_screenshot(app_id, platform, screenshot_id):
 
     db.session.commit()
     return jsonify(success=True, message=f"Deleted screenshot {screenshot_id}", id=screenshot_id, platform=platform)
-        
+
 @devportal_api.route('/app/<app_id>/banners/<platform>', methods=['GET'])
 def get_app_banners(app_id, platform):
     # Check app exists
@@ -505,7 +552,7 @@ def get_app_banners(app_id, platform):
     try:
         app = App.query.filter(App.id == app_id).one()
     except NoResultFound:
-        return jsonify(error="Unknown app", e="app.notfound"), 404    
+        return jsonify(error="Unknown app", e="app.notfound"), 404
 
     asset_collection = AssetCollection.query.filter(AssetCollection.app_id == app.id, AssetCollection.platform == platform).one_or_none()
 
@@ -544,7 +591,7 @@ def new_app_banner(app_id, platform):
     if not is_valid_image_size(new_image, "banner"):
         max_w, max_h = get_max_image_dimensions("banner")
         return jsonify(error="Invalid image size", e="banner.illegaldimensions", message=f"Image should be {max_w}x{max_h}"), 400
-        
+
     if asset_collection is None:
         # With screenshots we create new asset collection
         # However, if we do that here we can end up with an asset collection for a platform that has no screenshots. So let's fail here and force the user to upload a screenshot for that platform first
@@ -591,8 +638,8 @@ def delete_banner(app_id, platform, banner_id):
     if len(asset_collection.headers) < 2 and app.type == "watchapp":
         # Not sure what code to use here. It's not 400 as the request is valid. Don't want a 200. For now returning 409 Conflict
         return jsonify(
-            error="At least one header required for watchapps", 
-            e="banner.islast", 
+            error="At least one header required for watchapps",
+            e="banner.islast",
             message="Cannot delete the last banner as at least one banner is required for watchapps. Add another banner then delete this one."
         ), 409
 
@@ -603,26 +650,26 @@ def delete_banner(app_id, platform, banner_id):
 
     db.session.commit()
     return jsonify(success=True, message=f"Deleted banner {banner_id}", id=banner_id, platform=platform)
-        
+
 @devportal_api.route('/app/<app_id>/icons', methods=['GET'])
 def get_app_icons(app_id):
     try:
         app = App.query.filter(App.id == app_id).one()
     except NoResultFound:
-        return jsonify(error="Unknown app", e="app.notfound"), 404    
+        return jsonify(error="Unknown app", e="app.notfound"), 404
 
-  
+
     return jsonify(small=app.icon_small, large=app.icon_large)
 
 @devportal_api.route('/app/<app_id>/icon/<size>', methods=['GET'])
 def get_app_icon(app_id, size):
     if size not in ("large", "small"):
-        return jsonify(error="Invalid icon size. Expected 'small' or 'large'.", e="size.invalid"), 404 
+        return jsonify(error="Invalid icon size. Expected 'small' or 'large'.", e="size.invalid"), 404
 
     try:
         app = App.query.filter(App.id == app_id).one()
     except NoResultFound:
-        return jsonify(error="Unknown app", e="app.notfound"), 404    
+        return jsonify(error="Unknown app", e="app.notfound"), 404
 
     out = app.icon_small if size == "small" else app.icon_large
     return jsonify(out)
@@ -737,7 +784,7 @@ def wizard_rename_developer(developer_id):
     if "name" not in req:
         return jsonify(error="Missing required field: name", e="missing.field.name"), 400
 
-    
+
     developer = Developer.query.filter_by(id=developer_id).one_or_none()
     if developer is None:
         return jsonify(error="Developer not found", e="id.invalid"), 404
@@ -749,7 +796,7 @@ def wizard_rename_developer(developer_id):
 
 @devportal_api.route('/wizard/app/<app_id>', methods=['POST'])
 def wizard_update_app(app_id):
-    # Update app as a wizard. Currently only allowed field is developer_id 
+    # Update app as a wizard. Currently only allowed field is developer_id
     allowed_fields = [
         "developer_id"
     ]
@@ -781,7 +828,7 @@ def wizard_update_app(app_id):
             app.developer_id = req["developer_id"]
             change_occured = True
             audit_log(f'Set developer ID of app \'{app.title}\' ({app.id}) to {req["developer_id"]}')
-    
+
     if change_occured:
         try:
             db.session.commit()
@@ -791,7 +838,7 @@ def wizard_update_app(app_id):
     else:
         return jsonify(error="Invalid POST body. Provide one or more fields to update", e="body.invalid"), 400
 
-    
+
 @devportal_api.route('/wizard/app/<app_id>', methods=['DELETE'])
 def wizard_delete_app(app_id):
     if not user_is_wizard():
@@ -816,7 +863,7 @@ def wizard_delete_app(app_id):
 def wizard_get_s3_assets(app_id):
     if not user_is_wizard():
         return jsonify(error="You are not a wizard", e="permission.denied"), 403
-    
+
     app = App.query.filter(App.id == app_id).one_or_none()
     if app is None:
         return jsonify(error="Unknown app", e="app.notfound"), 404
@@ -825,7 +872,7 @@ def wizard_get_s3_assets(app_id):
     pbws = []
 
     if app.icon_large:
-        images.append(app.icon_large) 
+        images.append(app.icon_large)
     if app.icon_small:
         images.append(app.icon_small)
 
@@ -848,7 +895,7 @@ def wizard_get_s3_assets(app_id):
 @devportal_api.route('/archive/latest', methods=['GET'])
 def download_archive():
     uid = get_uid() # unused, does auth so AI scrapers don't waste all our bandwidth, though
-    
+
     archive = AvailableArchive.query.order_by(AvailableArchive.created_at.desc()).limit(1).one()
     return jsonify(success=True, url=get_link_for_archive(archive.filename))
 
