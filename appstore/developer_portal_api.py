@@ -391,21 +391,19 @@ def set_app_visbility(app_id):
 
     if str(req["visibility"]).lower() == "public":
 
-        app.visible = True
-        algolia_index.partial_update_objects([algolia_app(app)], { 'createIfNotExists': True })
-        db.session.commit()
+        if app.visible == False:
+            app.visible = True
+            algolia_index.partial_update_objects([algolia_app(app)], { 'createIfNotExists': True })
+            db.session.commit()
         return jsonify(success=True, visibility="public")
 
     elif str(req["visibility"]).lower() == "private":
 
-        # Delete the entry from Algolia
-        algolia_client.delete_object(
-                index_name=algolia_index,
-                object_id=app_id,
-        )
-
-        app.visible = False
-        db.session.commit()
+        if app.visible == True:
+            # Delete the entry from Algolia
+            algolia_index.delete_object(app_id)
+            app.visible = False
+            db.session.commit()
         return jsonify(success=True, visibility="private")
 
     else:
