@@ -354,7 +354,7 @@ def submit_new_release(app_id):
         discord.announce_release(app, release_new, pbw.is_generated())
     except Exception as e:
         # We don't want to fail just because Discord webhook is being weird
-        print("Discord is being weird: {repr(e)}")
+        print(f"Discord is being weird: {repr(e)}")
 
     try:
         discourse.announce_release(app, release_new, pbw.is_generated())
