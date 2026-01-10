@@ -210,13 +210,13 @@ def submit_new_app():
             discourse.announce_new_app(app_obj, pbw.is_generated())
         except Exception as e:
             # We don't want to fail just because Discourse is being weird
-            print("Discourse is being weird: {repr(e)}")
+            print(f"Discourse is being weird: {repr(e)}")
 
         try:
             discord.announce_new_app(app_obj, pbw.is_generated())
         except Exception as e:
             # We don't want to fail just because Discord is being weird
-            print("Discord is being weird: {repr(e)}")
+            print(f"Discord is being weird: {repr(e)}")
 
         return jsonify(success=True, id=app_obj.id)
 
@@ -354,7 +354,7 @@ def submit_new_release(app_id):
         discord.announce_release(app, release_new, pbw.is_generated())
     except Exception as e:
         # We don't want to fail just because Discord webhook is being weird
-        print("Discord is being weird: {repr(e)}")
+        print(f"Discord is being weird: {repr(e)}")
 
     try:
         discourse.announce_release(app, release_new, pbw.is_generated())
@@ -403,6 +403,12 @@ def set_app_visbility(app_id):
             # Delete the entry from Algolia
             algolia_index.delete_object(app_id)
             app.visible = False
+
+            try:
+                discord.report_app_unlisted(app.title, app.developer.name, app.id, app.app_uuid)
+            except Exception as e:
+                print(f"Discord is being weird: {repr(e)}")
+
             db.session.commit()
         return jsonify(success=True, visibility="private")
 

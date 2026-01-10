@@ -87,6 +87,9 @@ def screenshot_section(app):
     return output
 
 def announce_release(app, release, is_generated):
+    if config["TEST_APP_UUID"] is not None and config["TEST_APP_UUID"] == str(app.app_uuid):
+        return
+
     if app.discourse_topic_id == 0:
         announce_new_app(app, is_generated, is_new=False)
 
@@ -104,6 +107,10 @@ def announce_release(app, release, is_generated):
 """)
 
 def announce_new_app(app, is_generated, is_new=True):
+
+    if config["TEST_APP_UUID"] is not None and config["TEST_APP_UUID"] == str(app.app_uuid):
+        return
+
     _create_or_post_to_topic(app, is_generated, text=f"""
 {banner(app)}
 

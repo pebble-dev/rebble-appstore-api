@@ -17,6 +17,14 @@ import appstore # break the circular dependency to import get_topic_url_for_app 
 from .settings import config
 from appstore.models import App, AssetCollection, CompanionApp
 
+valid_platforms = [
+    "aplite",
+    "basalt",
+    "chalk",
+    "diorite",
+    "emery",
+    "flint"
+]
 HARDWARE_SUPPORT = {
     'aplite': ['aplite'],
     'basalt': ['basalt', 'aplite'],
@@ -25,6 +33,44 @@ HARDWARE_SUPPORT = {
     'emery': ['emery', 'diorite', 'basalt', 'aplite'],
     'flint': ['flint', 'diorite', 'aplite']
 }
+fallbacks = {
+        'aplite': ['aplite', 'diorite', 'flint', 'basalt'],
+        'basalt': ['basalt', 'aplite'],
+        'chalk': ['chalk', 'basalt'],
+        'diorite': ['diorite', 'flint', 'aplite', 'basalt'],
+        'emery': ['emery', 'basalt', 'diorite', 'aplite'],
+        'flint': ['flint', 'diorite', 'aplite', 'basalt']
+}
+plat_dimensions = {
+    'aplite': (144, 168),
+    'basalt': (144, 168),
+    'chalk': (180, 180),
+    'diorite': (144, 168),
+    'emery': (200, 228),
+    'flint': (144, 168),
+}
+
+def get_max_image_dimensions(resource_type):
+    max_w = 144
+    max_h = 168
+
+    if resource_type == "banner":
+        max_w = 720
+        max_h = 320
+    elif resource_type == "screenshot_chalk":
+        max_w = 180
+        max_h = 180
+    elif resource_type == "screenshot_emery":
+        max_w = 200
+        max_h = 228
+    elif resource_type == "large_icon":
+        max_w = 144
+        max_h = 144
+    elif resource_type == "small_icon":
+        max_w = 48
+        max_h = 48
+
+    return max_w, max_h
 
 parent_app = None
 
@@ -45,24 +91,6 @@ class newAppValidationException(Exception):
         self.message = message
         self.e = e_code
         super().__init__(self.message)
-
-plat_dimensions = {
-    'aplite': (144, 168),
-    'basalt': (144, 168),
-    'chalk': (180, 180),
-    'diorite': (144, 168),
-    'emery': (200, 228),
-    'flint': (144, 168),
-}
-
-valid_platforms = [
-    "aplite",
-    "basalt",
-    "chalk",
-    "diorite",
-    "emery",
-    "flint"
-]
 
 permitted_image_types = [
     "png",
@@ -222,14 +250,6 @@ def asset_fallback(collections: Dict[str, AssetCollection], target_hw='basalt') 
     # ending up with round screenshots.
     # 13 Aug 25 - WM - Apparently we are getting a lot of requests with 'unknown' as the target_hw.
     # Anyone failing to identify will be presumed to be diorite.
-    fallbacks = {
-        'aplite': ['aplite', 'diorite', 'flint', 'basalt'],
-        'basalt': ['basalt', 'aplite'],
-        'chalk': ['chalk', 'basalt'],
-        'diorite': ['diorite', 'flint', 'aplite', 'basalt'],
-        'emery': ['emery', 'basalt', 'diorite', 'aplite'],
-        'flint': ['flint', 'diorite', 'aplite', 'basalt']
-    }
     fallback = fallbacks[target_hw] if target_hw in fallbacks else fallbacks['diorite']
     for hw in fallback:
         if hw in collections:
@@ -495,28 +515,6 @@ def is_valid_image_size(file, image_type):
         return False
     else:
         return True
-    
-def get_max_image_dimensions(resource_type):
-    max_w = 144
-    max_h = 168
-
-    if resource_type == "banner":
-        max_w = 720
-        max_h = 320
-    elif resource_type == "screenshot_chalk":
-        max_w = 180
-        max_h = 180
-    elif resource_type == "screenshot_emery":
-        max_w = 200
-        max_h = 228
-    elif resource_type == "large_icon":
-        max_w = 144
-        max_h = 144
-    elif resource_type == "small_icon":
-        max_w = 48
-        max_h = 48
-
-    return max_w, max_h
 
 def who_am_i():
     result = demand_authed_request('GET', f"{config['REBBLE_AUTH_URL']}/api/v1/me")
