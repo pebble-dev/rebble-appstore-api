@@ -179,6 +179,39 @@ def report_app_flag(reported_by, app_name, developer_name, app_id, affected_app_
 
     send_admin_discord_webhook(request_data)
 
+def report_app_unlisted(app_name, developer_name, app_id, affected_app_uuid = None):
+
+    if affected_app_uuid is not None:
+        if config["TEST_APP_UUID"] is not None and config["TEST_APP_UUID"] == str(affected_app_uuid):
+            return
+
+    request_fields = [{
+             "name": "App",
+             "value": app_name
+         },
+         {
+             "name": "Developer",
+             "value": developer_name
+         }
+     ]
+
+    request_data = {
+        "embeds": [{
+            "title": "An app was unlisted 👻",
+            "color": int("0xFFA845", 0),
+            "description": "A developer has unlisted their app from the store.",
+            "thumbnail": {
+                "url": "https://storage.googleapis.com/rebble-appstore-assets/invisible.png",
+                "height": 80,
+                "width": 80
+            },
+            "url": f"{config['APPSTORE_ROOT']}/application/{app_id}",
+            "fields": request_fields
+        }]
+    }
+
+    send_admin_discord_webhook(request_data)
+
 def send_discord_webhook(request_data, is_generated = False):
     if not is_generated:
         if config['DISCORD_HOOK_URL'] is not None:
