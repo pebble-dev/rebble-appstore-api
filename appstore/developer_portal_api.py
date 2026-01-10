@@ -220,7 +220,6 @@ def submit_new_app():
 
         return jsonify(success=True, id=app_obj.id)
 
-
 @devportal_api.route('/app/<app_id>', methods=['POST'])
 def update_app_fields(app_id):
         req = request.json
@@ -364,6 +363,54 @@ def submit_new_release(app_id):
         print(f"Discourse is being weird: {repr(e)}")
 
     return jsonify(success=True)
+
+@devportal_api.route('/app/<app_id>/visbility', methods=['POST'])
+def set_app_visbility(app_id):
+    if not user_is_wizard():
+        return jsonify(error="This API is not public yet", e="permission.denied"), 403
+
+    try:
+        req = request.json
+    except BadRequest:
+        return jsonify(error="Invalid POST body. Expected JSON", e="body.invalid"), 400
+
+    if req is None:
+        return jsonify(error="Invalid POST body. Expected JSON and 'Content-Type: application/json'", e="request.invalid"), 400
+
+    if "visibility" not in req:
+        return jsonify(error="Missing required field: visibility", e="missing.field.visibility"), 400
+
+    try:
+        app = App.query.filter(App.id == app_id).one()
+    except NoResultFound:
+        return jsonify(error="Unknown app", e="app.notfound"), 400
+
+    # Check we own the app
+    if not is_users_developer_id(app.developer_id):
+        return jsonify(error="You do not have permission to modify that app", e="permission.denied"), 403
+
+    if str(req["visibility"]).lower() == "public":
+
+        app.visible = True
+        algolia_index.partial_update_objects([algolia_app(app)], { 'createIfNotExists': True })
+        db.session.commit()
+        return jsonify(success=True, visibility="public")
+
+    elif str(req["visibility"]).lower() == "private":
+
+        # Delete the entry from Algolia
+        algolia_client.delete_object(
+                index_name=algolia_index,
+                object_id=app_id,
+        )
+
+        app.visible = False
+        db.session.commit()
+        return jsonify(success=True, visibility="private")
+
+    else:
+        return jsonify(error="Invalid value for field: visibility. Expected public or private", e="invalid.field.visibility"), 400
+
 
 @devportal_api.route('/app/<app_id>/timeline_token')
 def apps_timeline_token(app_id):
