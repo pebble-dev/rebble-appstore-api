@@ -19,7 +19,7 @@ def announce_release(app, release, is_generated):
         release_notes = release.release_notes
         if not release_notes:
             release_notes = "N/A"
-        
+
         request_fields = [{
             "name": "Release Notes",
             "value": release_notes
@@ -49,7 +49,7 @@ def announce_release(app, release, is_generated):
 
         send_discord_webhook(request_data, is_generated)
 
-def announce_new_app(app, is_generated):
+def announce_new_app(app, is_generated, is_hidden = False):
 
     if config["TEST_APP_UUID"] is not None and config["TEST_APP_UUID"] == str(app.app_uuid):
         return
@@ -85,7 +85,13 @@ def announce_new_app(app, is_generated):
                     "name": "Website",
                     "value": app.website
                 })
-    
+
+    if is_hidden:
+        request_fields.append({
+                    "name": "App Visibility",
+                    "value": "Unlisted"
+        })
+
     topic_url = appstore.discourse.get_topic_url_for_app(app)
     if topic_url:
         request_fields.append({
@@ -109,7 +115,10 @@ def announce_new_app(app, is_generated):
         }]
     }
 
-    send_discord_webhook(request_data, is_generated)
+    if is_hidden:
+        send_admin_discord_webhook(request_data)
+    else:
+        send_discord_webhook(request_data, is_generated)
 
 def audit_log(operation, affected_app_uuid = None):
 
