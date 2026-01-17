@@ -206,17 +206,24 @@ def submit_new_app():
         if algolia_index and app_obj.visible:
             algolia_index.partial_update_objects([algolia_app(app_obj)], { 'createIfNotExists': True })
 
-        try:
-            discourse.announce_new_app(app_obj, pbw.is_generated())
-        except Exception as e:
-            # We don't want to fail just because Discourse is being weird
-            print(f"Discourse is being weird: {repr(e)}")
+        if is_visible:
+            try:
+                discourse.announce_new_app(app_obj, pbw.is_generated())
+            except Exception as e:
+                # We don't want to fail just because Discourse is being weird
+                print(f"Discourse is being weird: {repr(e)}")
 
-        try:
-            discord.announce_new_app(app_obj, pbw.is_generated())
-        except Exception as e:
-            # We don't want to fail just because Discord is being weird
-            print(f"Discord is being weird: {repr(e)}")
+            try:
+                discord.announce_new_app(app_obj, pbw.is_generated())
+            except Exception as e:
+                # We don't want to fail just because Discord is being weird
+                print(f"Discord is being weird: {repr(e)}")
+        else:
+            try:
+                discord.announce_new_app(app_obj, pbw.is_generated(), True)
+            except Exception as e:
+                # We don't want to fail just because Discord is being weird
+                print(f"Discord is being weird: {repr(e)}")
 
         return jsonify(success=True, id=app_obj.id)
 
@@ -350,17 +357,18 @@ def submit_new_release(app_id):
     upload_pbw(release_new, request.files['pbw'])
     db.session.commit()
 
-    try:
-        discord.announce_release(app, release_new, pbw.is_generated())
-    except Exception as e:
-        # We don't want to fail just because Discord webhook is being weird
-        print(f"Discord is being weird: {repr(e)}")
+    if app.visible:
+        try:
+            discord.announce_release(app, release_new, pbw.is_generated())
+        except Exception as e:
+            # We don't want to fail just because Discord webhook is being weird
+            print(f"Discord is being weird: {repr(e)}")
 
-    try:
-        discourse.announce_release(app, release_new, pbw.is_generated())
-    except Exception as e:
-        # We don't want to fail just because Discourse webhook is being weird
-        print(f"Discourse is being weird: {repr(e)}")
+        try:
+            discourse.announce_release(app, release_new, pbw.is_generated())
+        except Exception as e:
+            # We don't want to fail just because Discourse webhook is being weird
+            print(f"Discourse is being weird: {repr(e)}")
 
     return jsonify(success=True)
 
