@@ -402,7 +402,7 @@ def set_app_visbility(app_id):
             db.session.commit()
         return jsonify(success=True, visibility="public")
 
-    elif str(req["visibility"]).lower() == "private":
+    elif str(req["visibility"]).lower() == "unlisted":
 
         if app.visible == True:
             # Delete the entry from Algolia
@@ -415,10 +415,10 @@ def set_app_visbility(app_id):
                 print(f"Discord is being weird: {repr(e)}")
 
             db.session.commit()
-        return jsonify(success=True, visibility="private")
+        return jsonify(success=True, visibility="unlisted")
 
     else:
-        return jsonify(error="Invalid value for field: visibility. Expected public or private", e="invalid.field.visibility"), 400
+        return jsonify(error="Invalid value for field: visibility. Expected public or unlisted", e="invalid.field.visibility"), 400
 
 
 @devportal_api.route('/app/<app_id>/timeline_token')
