@@ -23,7 +23,8 @@ valid_platforms = [
     "chalk",
     "diorite",
     "emery",
-    "flint"
+    "flint",
+    "gabbro"
 ]
 HARDWARE_SUPPORT = {
     'aplite': ['aplite'],
@@ -31,7 +32,8 @@ HARDWARE_SUPPORT = {
     'chalk': ['chalk'],
     'diorite': ['diorite', 'aplite'],
     'emery': ['emery', 'diorite', 'basalt', 'aplite'],
-    'flint': ['flint', 'diorite', 'aplite']
+    'flint': ['flint', 'diorite', 'aplite'],
+    'gabbro': ['gabbro', 'chalk']
 }
 fallbacks = {
         'aplite': ['aplite', 'diorite', 'flint', 'basalt'],
@@ -39,7 +41,8 @@ fallbacks = {
         'chalk': ['chalk', 'basalt'],
         'diorite': ['diorite', 'flint', 'aplite', 'basalt'],
         'emery': ['emery', 'basalt', 'diorite', 'aplite'],
-        'flint': ['flint', 'diorite', 'aplite', 'basalt']
+        'flint': ['flint', 'diorite', 'aplite', 'basalt'],
+        'gabbro': ['gabbro', 'chalk', 'basalt']
 }
 plat_dimensions = {
     'aplite': (144, 168),
@@ -48,6 +51,7 @@ plat_dimensions = {
     'diorite': (144, 168),
     'emery': (200, 228),
     'flint': (144, 168),
+    'gabbro': (260, 260)
 }
 
 def get_max_image_dimensions(resource_type):
@@ -63,6 +67,9 @@ def get_max_image_dimensions(resource_type):
     elif resource_type == "screenshot_emery":
         max_w = 200
         max_h = 228
+    elif resource_type == "screenshot_gabbro":
+        max_w = 260
+        max_h = 260
     elif resource_type == "large_icon":
         max_w = 144
         max_h = 144

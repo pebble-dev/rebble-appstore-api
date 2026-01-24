@@ -90,6 +90,7 @@ def submit_new_app():
             "diorite": [],
             "emery": [],
             "flint": [],
+            "gabbro": [],
         }
 
         try:
