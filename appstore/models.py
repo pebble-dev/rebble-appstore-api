@@ -63,6 +63,7 @@ class App(db.Model):
                                   passive_deletes=True,
                                   lazy='selectin')
     created_at = db.Column(db.DateTime)
+    updated_at = db.Column(db.DateTime, index=True)
     developer_id = db.Column(db.String(24), db.ForeignKey('developers.id'))
     developer = db.relationship('Developer', lazy='joined')
     hearts = db.Column(db.Integer, index=True)
