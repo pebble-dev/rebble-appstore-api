@@ -177,6 +177,7 @@ def submit_new_app():
             category_id=category_map[params['category']],
             companions={}, # companions not supported yet
             created_at=datetime.datetime.utcnow(),
+            updated_at=datetime.datetime.utcnow(),
             developer=developer,
             discourse_topic_id=0,
             hearts=0,
@@ -355,6 +356,7 @@ def submit_new_release(app_id):
                                    compatibility=appinfo.get('targetPlatforms', ['aplite', 'basalt', 'diorite', 'emery', 'flint']))
 
     upload_pbw(release_new, request.files['pbw'])
+    App.query.filter_by(id=app_id).update({'updated_at': datetime.datetime.utcnow()})
     db.session.commit()
 
     if app.visible:

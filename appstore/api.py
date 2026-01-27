@@ -31,6 +31,8 @@ def generate_app_response(results, sort_override=None):
         results = results.filter(App.recent_hearts!=None).order_by(App.recent_hearts.desc())
     elif sorting == 'random_weekly':
         results = results.filter(App.random_weekly!=None).order_by(App.random_weekly.desc())
+    elif sorting == 'updated_at':
+        results = results.filter(App.updated_at!=None).order_by(App.updated_at.desc())
     else:
         results = results.order_by(App.id.desc())
     # This is slow-ish, but over our appstore size we don't really care.
@@ -155,6 +157,9 @@ def apps_by_collection(slug, app_type):
         sort_override = 'recent_hearts'
     elif slug == 'all-generated':
         apps = App.query.filter(App.type == app_type, generated_filter(), global_filter(hw))
+    elif slug == 'recently-updated':
+        apps = App.query.filter(App.type == app_type, global_filter(hw))
+        sort_override = 'updated_at'
     else:
         collection = Collection.query.filter_by(slug=slug).one_or_none()
         sort_override = 'random_weekly'
@@ -272,6 +277,18 @@ def home(home_type):
                     .limit(7)],
             'links': {
                 'apps': url_for('api.apps_by_collection', slug='most-loved', app_type=home_type),
+            }
+        }, {
+            'name': 'Recently Updated',
+            'slug': 'recently-updated',
+            'application_ids': [
+                x.id for x in App.query
+                    .filter(App.type == app_type, App.updated_at!=None, global_filter(hw))
+                    .order_by(App.updated_at.desc())
+                    .distinct()
+                    .limit(7)],
+            'links': {
+                'apps': url_for('api.apps_by_collection', slug='recently-updated', app_type=home_type),
             }
         }, {
             'name': f'All {"Watchfaces" if app_type == "watchface" else "Watchapps"}',
