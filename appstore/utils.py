@@ -23,7 +23,8 @@ valid_platforms = [
     "chalk",
     "diorite",
     "emery",
-    "flint"
+    "flint",
+    "gabbro",
 ]
 HARDWARE_SUPPORT = {
     'aplite': ['aplite'],
@@ -31,15 +32,17 @@ HARDWARE_SUPPORT = {
     'chalk': ['chalk'],
     'diorite': ['diorite', 'aplite'],
     'emery': ['emery', 'diorite', 'basalt', 'aplite'],
-    'flint': ['flint', 'diorite', 'aplite']
+    'flint': ['flint', 'diorite', 'aplite'],
+    'gabbro': ['gabbro', 'chalk'],
 }
 fallbacks = {
-        'aplite': ['aplite', 'diorite', 'flint', 'basalt'],
-        'basalt': ['basalt', 'aplite'],
-        'chalk': ['chalk', 'basalt'],
-        'diorite': ['diorite', 'flint', 'aplite', 'basalt'],
-        'emery': ['emery', 'basalt', 'diorite', 'aplite'],
-        'flint': ['flint', 'diorite', 'aplite', 'basalt']
+    'aplite': ['aplite', 'diorite', 'flint', 'basalt'],
+    'basalt': ['basalt', 'aplite'],
+    'chalk': ['chalk', 'basalt'],
+    'diorite': ['diorite', 'flint', 'aplite', 'basalt'],
+    'emery': ['emery', 'basalt', 'diorite', 'aplite'],
+    'flint': ['flint', 'diorite', 'aplite', 'basalt'],
+    'gabbro': ['gabbro', 'chalk', 'basalt'],
 }
 plat_dimensions = {
     'aplite': (144, 168),
@@ -48,6 +51,7 @@ plat_dimensions = {
     'diorite': (144, 168),
     'emery': (200, 228),
     'flint': (144, 168),
+    'gabbro': (260, 260),
 }
 
 def get_max_image_dimensions(resource_type):
@@ -63,6 +67,9 @@ def get_max_image_dimensions(resource_type):
     elif resource_type == "screenshot_emery":
         max_w = 200
         max_h = 228
+    elif resource_type == "screenshot_gabbro":
+        max_w = 260
+        max_h = 260
     elif resource_type == "large_icon":
         max_w = 144
         max_h = 144
@@ -126,7 +133,7 @@ def _jsonify_common(app: App, target_hw: str) -> dict:
                     'supported': bool(set(HARDWARE_SUPPORT[x]) & set(release.compatibility if release and release.compatibility else ['aplite', 'basalt', 'diorite', 'emery', 'flint'])),
                     'firmware': {'major': 3},
                     'has_binary': release and release.binaries and (x in release.binaries),
-                } for x in ['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint']
+                } for x in ['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint', 'gabbro']
             },
         },
         'description': assets.description,
@@ -233,7 +240,7 @@ def algolia_app(app: App) -> dict:
     if release:
         tags.extend(set(item for platform in (release.compatibility or []) for item in HARDWARE_SUPPORT[platform]))
     else:
-        tags.extend(['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint'])
+        tags.extend(['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint', 'gabbro'])
         tags.append('companion-app')
     if len(app.companions) == 0:
         tags.extend(['android', 'ios'])

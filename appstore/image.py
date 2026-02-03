@@ -27,6 +27,7 @@ base_text_space=530
 
 icon_mask = Image.open(os.path.join(static_folder, 'icon-mask.png')).convert('L')
 chalk_mask = Image.open(os.path.join(static_folder, 'chalk-mask.png')).convert('L')
+gabbro_mask = Image.open(os.path.join(static_folder, 'gabbro-mask.png')).convert('L')
 
 platform_borders = {
     'aplite': {
@@ -58,6 +59,11 @@ platform_borders = {
         'image': Image.open(os.path.join(static_folder, 'diorite-border.png')).convert("RGBA"),
         'fallback': Image.open(os.path.join(static_folder, 'fallback-bw.png')).convert("RGBA"),
         'offset': (54, 110)
+    },
+    'gabbro': {
+        'image': Image.open(os.path.join(static_folder, 'gabbro-border.png')).convert("RGBA"),
+        'fallback': Image.open(os.path.join(static_folder, 'fallback-gabbro.png')).convert("RGBA"),
+        'offset': (56, 65)
     }
 }
 
@@ -65,9 +71,10 @@ font_large = ImageFont.truetype(os.path.join(static_folder, 'Lato-Bold.ttf'), 48
 font_small = ImageFont.truetype(os.path.join(static_folder, 'Lato-Regular.ttf'), 32)
 
 def preferred_grouping(platforms):
-    order = [['diorite', 'emery'], ['flint', 'emery'], ['basalt', 'emery'], ['chalk', 'emery'],
+    order = [['gabbro', 'emery'], ['diorite', 'emery'], ['flint', 'emery'], ['basalt', 'emery'],
+        ['chalk', 'emery'], ['gabbro', 'chalk'], ['gabbro', 'basalt'], ['gabro', 'flint'], ['gabro', 'diorite'],
         ['basalt', 'diorite'], ['basalt', 'flint'], ['basalt', 'chalk'], ['basalt', 'aplite'],
-        ['flint'], ['emery'], ['diorite'], ['chalk'], ['basalt'], ['aplite']]
+        ['gabbro'], ['flint'], ['emery'], ['diorite'], ['chalk'], ['basalt'], ['aplite']]
     for selection in order:
       if len(selection) == len(selection & platforms):
         return selection
@@ -122,6 +129,8 @@ def platform_image_in_border(canvas, image, top_left, platform):
 
     if platform == 'chalk':
         image.putalpha(chalk_mask)
+    if platform == 'gabbro':
+        image.putalpha(gabbro_mask)
 
     ix = top_left[0] + border['offset'][0]
     iy = top_left[1] + border['offset'][1]

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+<svg width="370" height="392" version="1.1" viewBox="0 0 370 392" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <defs>
+  <clipPath id="clipPath430">
+   <path d="m461.88 2539.7v467.27h467.27v-467.27zm230.12 104.32c71.797 0 130 58.203 130 130s-58.203 130-130 130-130-58.203-130-130 58.203-130 130-130z" stroke-width="1.0791"/>
+  </clipPath>
+  <linearGradient id="linearGradient373" x1="2014" x2="2014" y1="-768" y2="-484" gradientTransform="matrix(1.0791 0 0 1.0791 -1408.3 3449.4)" gradientUnits="userSpaceOnUse">
+   <stop stop-color="#c3c7cc" offset="0"/>
+   <stop stop-color="#a1a4a8" offset=".044164"/>
+   <stop stop-color="#b8bcc0" offset=".75"/>
+   <stop stop-color="#a3a7ab" offset=".79807"/>
+   <stop stop-color="#b9bcc1" offset=".88782"/>
+   <stop stop-color="#a6aaae" offset=".95973"/>
+   <stop stop-color="#7e8084" offset="1"/>
+  </linearGradient>
+  <linearGradient id="linearGradient375" x1="-320" x2="-320" y2="128" gradientTransform="matrix(3.6524 0 0 3.6524 1864.3 2539.9)" gradientUnits="userSpaceOnUse">
+   <stop stop-color="#c8c8c8" offset="0"/>
+   <stop stop-color="#fff" offset=".053118"/>
+   <stop stop-color="#afafaf" offset=".19048"/>
+   <stop stop-color="#676767" offset=".7787"/>
+   <stop stop-color="#e2e2e2" offset=".90285"/>
+   <stop stop-color="#e6e6e6" offset="1"/>
+  </linearGradient>
+  <linearGradient id="linearGradient418" x1="224.97" x2="224.97" y1="2627.5" y2="2919.7" gradientTransform="translate(466)" gradientUnits="userSpaceOnUse">
+   <stop stop-color="#eeedec" offset="0"/>
+   <stop stop-color="#95989c" offset="1"/>
+  </linearGradient>
+  <radialGradient id="radialGradient417" cx="-310" cy="50" r="41" gradientTransform="matrix(3.6524 0 0 3.6524 1863.4 2539.9)" gradientUnits="userSpaceOnUse">
+   <stop stop-color="#dcdcdc" offset="0"/>
+   <stop stop-color="#fff" offset=".51719"/>
+   <stop stop-color="#c2c6cb" offset="1"/>
+  </radialGradient>
+  <filter id="filter21" x="-.089773" y="-.064402" width="1.1795" height="1.1288" color-interpolation-filters="sRGB">
+   <feGaussianBlur stdDeviation="12.34375"/>
+  </filter>
+ </defs>
+ <g transform="translate(20)">
+  <g transform="translate(-526,-2579)" clip-path="url(#clipPath430)">
+   <path d="m625 2552c-5.54 0-10 4.46-10 10v55h-18l-2.8535 42.324a156 156 0 00-58.174 104.68h-2.668c-4.0469 0-7.3047 3.2578-7.3047 7.3047v22.391c0 4.0469 3.2578 7.3047 7.3047 7.3047h2.873a156 156 0 0057.945 102.94l2.8262 43.064h18.051v55c0 5.54 4.46 10 10 10h130c5.54 0 10-4.46 10-10v-55h18.051l2.7539-41.496a156 156 0 0039.336-44.275l2.2656 1.0723c3.656 1.73 7.9698.1397 9.6758-3.5703l9.2305-20.1c1.704-3.71.13352-8.0904-3.5215-9.8204l-2.7344-1.2421a156 156 0 005.709-26.568h2.9297c4.0469 0 7.3047-3.2578 7.3047-7.3047v-22.391c0-4.0469-3.2578-7.3047-7.3047-7.3047h-2.7246a156 156 0 00-5.7383-27.713l2.5586-1.207c3.656-1.73 5.2255-6.091 3.5215-9.791l-9.2305-20.029c-1.706-3.7-6.0208-5.2906-9.6758-3.5606l-2.0039.793a156 156 0 00-39.648-44.756l-2.7031-40.736h-18.051v-55c0-5.54-4.46-10-10-10z" filter="url(#filter21)" opacity=".6" stroke-width="1.0791"/>
+   <path d="m597 2609h186.05l10.95 165-10.95 165h-186.1l-10.949-166.82z" fill="url(#linearGradient373)" stroke-width="1.0791"/>
+   <rect x="615" y="2544" width="150" height="460" ry="10" fill="url(#linearGradient375)" stroke-width="1.0791"/>
+   <rect x="526" y="2756" width="29" height="37" ry="7.3049" fill="#bdc1c6" stroke-width="1.0791"/>
+   <path d="m830 2815c-4.062-2.17-8.377-.57-10.082 3.14l-9.23 20.09c-1.705 3.72-.134 8.1 3.521 9.83l13.197 6.24c3.656 1.73 7.97.14 9.676-3.57l9.23-20.1c1.704-3.71.134-8.09-3.521-9.82z" fill="#bdc1c6" stroke-width="1.0791"/>
+   <rect x="827" y="2756" width="29" height="37" ry="7.3049" fill="#bdc1c6" stroke-width="1.0791"/>
+   <path d="m814 2699c-3.449 2.65-5.02 7.02-3.315 10.71l9.231 20.03c1.705 3.7 6.02 5.29 9.676 3.57l13.198-6.23c3.656-1.73 5.226-6.09 3.522-9.79l-9.231-20.03c-1.706-3.7-6.021-5.29-9.676-3.56z" fill="#bdc1c6" stroke-width="1.0791"/>
+   <circle cx="690.97" cy="2773.6" r="156" fill="url(#linearGradient418)" stroke-width="1.0791"/>
+   <circle cx="690.97" cy="2773.6" r="156" fill="url(#radialGradient417)" stroke-width="1.0791"/>
+   <circle cx="692" cy="2774" r="144" fill="#ecedef"/>
+   <circle cx="692" cy="2774" r="132" stroke-dashoffset=".2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="3.2" stroke-width="2"/>
+  </g>
+ </g>
+</svg>
