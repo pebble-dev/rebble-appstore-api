@@ -85,7 +85,7 @@ def app_image_by_id(key):
     if not app.preview_image:
         # Guess we will have to generate one.
         screenshots = {}
-        for hw in ['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint']:
+        for hw in ['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint', 'gabbro']:
             if hw in app.asset_collections:
                 screenshot = app.asset_collections[hw].screenshots[0]
                 if screenshot:
