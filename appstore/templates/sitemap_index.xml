@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex>
+{% for sitemap in sitemaps %}
+    <sitemap>
+        <loc>{{ sitemap }}</loc>
+    </sitemap>
+{% endfor %}
+</sitemapindex>
