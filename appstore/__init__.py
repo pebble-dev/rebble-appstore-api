@@ -21,6 +21,7 @@ from .developer_portal_api import init_app as init_developer_portal_api
 from .commands import init_app as init_commands
 from .utils import init_app as init_utils
 from .image import init_app as init_image
+from .sitemap import init_app as init_sitemap
 from .locker import locker
 
 app = Flask(__name__)
@@ -40,6 +41,7 @@ init_dev_portal_api(app)
 init_developer_portal_api(app)
 init_commands(app)
 init_image(app)
+init_sitemap(app)
 
 @app.route('/heartbeat')
 @app.route('/appstore-api/heartbeat')
