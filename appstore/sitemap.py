@@ -13,7 +13,7 @@ cache = Cache()
 
 languages = { 'x-default': '', 'en': 'en_US', 'de': 'de_DE', 'es': 'es_ES', 'fr': 'fr_FR', 'nl': 'nl_NL', 'pl': 'pl_PL', 'zh-Hans': 'zh_CN', 'zh-Hant': 'zh_TW' }
 app_types = ['watchapp', 'watchface']
-apps_per_page = 1000
+apps_per_page = 100
 
 def process_to_urls(paths):
     urls = []
