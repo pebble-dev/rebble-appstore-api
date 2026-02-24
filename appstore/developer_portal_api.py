@@ -199,7 +199,7 @@ def submit_new_app():
                                    release_notes=params['release_notes'],
                                    published_date=datetime.datetime.utcnow(),
                                    version=appinfo['versionLabel'],
-                                   compatibility=appinfo.get('targetPlatforms', ['aplite', 'basalt', 'diorite', 'emery', 'flint']))
+                                   compatibility=appinfo.get('targetPlatforms', ['aplite']))
         print(f"Created release {release.id}")
         upload_pbw(release, request.files['pbw'])
         db.session.commit()
@@ -353,7 +353,7 @@ def submit_new_release(app_id):
                                    release_notes=data["release_notes"],
                                    published_date=datetime.datetime.utcnow(),
                                    version=version,
-                                   compatibility=appinfo.get('targetPlatforms', ['aplite', 'basalt', 'diorite', 'emery', 'flint']))
+                                   compatibility=appinfo.get('targetPlatforms', ['aplite']))
 
     upload_pbw(release_new, request.files['pbw'])
     App.query.filter_by(id=app_id).update({'updated_at': datetime.datetime.utcnow()})
