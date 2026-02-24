@@ -15,7 +15,7 @@ import beeline
 
 import appstore # break the circular dependency to import get_topic_url_for_app from discourse
 from .settings import config
-from appstore.models import App, AssetCollection, CompanionApp
+from appstore.models import App, AssetCollection, CompanionApp, Release
 
 valid_platforms = [
     "aplite",
@@ -147,6 +147,24 @@ def _jsonify_common(app: App, target_hw: str) -> dict:
     return result
 
 
+def jsonify_hardware_platforms(release: Release) -> list:
+    app = release.app
+    assets = release.app.asset_collections
+    is_watchface = release.app.type == "watchface"
+    return [{
+        'sdk_version': f"{x.sdk_major}.{x.sdk_minor}",
+        'pebble_process_info_flags': x.process_info_flags,
+        'name': x.platform,
+        'description': asset_fallback(assets, x.platform).description,
+        'images': {
+            'icon': generate_image_url(app.icon_small, 48, 48, True),
+            'list': generate_image_url(app.icon_large, *plat_dimensions[x.platform] if is_watchface else (144, 144), True),
+            'screenshot': generate_image_url(asset_fallback(assets, x.platform).screenshots[0],
+                                             *plat_dimensions[x.platform])
+        }
+    } for x in release.binaries.values()]
+
+
 def jsonify_app(app: App, target_hw: str) -> dict:
     release = app.releases[0] if len(app.releases) > 0 else None
     assets = asset_fallback(app.asset_collections, target_hw)
@@ -200,6 +218,10 @@ def jsonify_app(app: App, target_hw: str) -> dict:
             'release_notes': release.release_notes,
             'version': release.version,
         }
+        result['hardware_platforms'] = jsonify_hardware_platforms(release)
+        if len(release.binaries) > 0:
+            result['icon_resource_id'] = next(iter(release.binaries.values())).icon_resource_id
+        
     return result
 
 

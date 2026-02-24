@@ -8,7 +8,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from .settings import config
 from .models import App, LockerEntry, db
 from .api import api
-from .utils import get_uid, generate_pbw_url, asset_fallback, generate_image_url, plat_dimensions, jsonify_companion, get_access_token, HARDWARE_SUPPORT
+from .utils import get_uid, generate_pbw_url, asset_fallback, generate_image_url, plat_dimensions, jsonify_companion, jsonify_hardware_platforms, get_access_token, HARDWARE_SUPPORT
 
 
 def jsonify_locker_app(entry):
@@ -38,18 +38,7 @@ def jsonify_locker_app(entry):
             'name': app.developer.name,
             'contact_email': 'noreply@rebble.io',
         },
-        'hardware_platforms': [{
-            'sdk_version': f"{x.sdk_major}.{x.sdk_minor}",
-            'pebble_process_info_flags': x.process_info_flags,
-            'name': x.platform,
-            'description': asset_fallback(assets, x.platform).description,
-            'images': {
-                'icon': generate_image_url(app.icon_small, 48, 48, True),
-                'list': generate_image_url(app.icon_large, *plat_dimensions[x.platform] if is_watchface else (144, 144), True),
-                'screenshot': generate_image_url(asset_fallback(assets, x.platform).screenshots[0],
-                                                 *plat_dimensions[x.platform])
-            }
-        } for x in release.binaries.values()],
+        'hardware_platforms': jsonify_hardware_platforms(release),
         'compatibility': {
             'ios': {
                 'supported': 'ios' in app.companions or 'android' not in app.companions,
