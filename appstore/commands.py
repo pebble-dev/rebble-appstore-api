@@ -416,6 +416,28 @@ def generate_index():
     print(flask.json.dumps(result, indent=2))
 
 
+@apps.command('rebuild-algolia')
+def rebuild_algolia():
+    apps = App.query.order_by(App.id)
+    result = []
+    print("loading apps...")
+    apps = list(apps)
+    print(f"{len(apps)} to reindex")
+    def update_algolia_and_wait(objects):
+        resp = algolia_index.partial_update_objects(objects, { 'createIfNotExists': True })
+        algolia_index.wait_task(resp['taskID'])
+    n_updated = 0
+    for app in apps:
+        if app.visible:
+            result.append(algolia_app(app))
+        n_updated += 1
+        if len(result) == 1000:
+            print(f"... {n_updated} ...")
+            update_algolia_and_wait(result)
+            result = []
+    update_algolia_and_wait(result)
+
+
 @apps.command('remove-hidden-apps-index')
 def remove_hidden_apps_index():
     apps = App.query.filter_by(visible=False).order_by(App.id)
