@@ -61,7 +61,8 @@ def jsonify_locker_app(entry):
             **{
                 x: {
                     'supported': bool(set(HARDWARE_SUPPORT[x]) & set(release.compatibility if release and release.compatibility else ['aplite', 'basalt', 'diorite', 'emery', 'flint'])),
-                    'firmware': {'major': 3}
+                    'firmware': {'major': 3},
+                    'has_binary': release and release.binaries and (x in release.binaries),
                 } for x in ['aplite', 'basalt', 'chalk', 'diorite', 'emery', 'flint']
             },
         },
