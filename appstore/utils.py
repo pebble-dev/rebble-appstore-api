@@ -237,6 +237,7 @@ def algolia_app(app: App) -> dict:
         'screenshot_images': [
             generate_image_url(x, 144, 168, True) for x in assets.screenshots
         ],
+        **({'version': release.version} if release else {}),
         '_tags': tags,
     }
 
