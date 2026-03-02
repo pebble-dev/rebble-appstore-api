@@ -13,8 +13,8 @@ PLATFORM_EMOJI = {
     'chalk': ':pebble-time-round-14-rainbow:',
     'diorite': ':pebble-2-aqua:',
     'emery': ':core-time-2-red:',
-    'flint': ':core-2-duo-black:'
-    'gabbro': ':core-time-round-2-14-rose-gold:',
+    'flint': ':core-2-duo-black:',
+    'gabbro': ':core-time-round-2-14-rose-gold:'
 }
 
 if config['DISCOURSE_API_KEY'] is None:
