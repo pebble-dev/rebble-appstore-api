@@ -588,6 +588,10 @@ def move_screenshot(app_id, platform):
         if screenshot_id not in asset_collection.screenshots:
             return jsonify(error=f"Screenshot not found: {screenshot_id}", e="screenshot.invalid"), 400
 
+    for screenshot_id in req["order"]:
+        if req["order"].count(screenshot_id) != 1:
+            return jsonify(error=f"Each screenshot ID can only be present once", e="screenshot.illegalrepeat"), 400
+
     asset_collection.screenshots = req["order"]
 
     # Invalidate the cached preview.
