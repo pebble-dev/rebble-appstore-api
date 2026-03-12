@@ -554,6 +554,47 @@ def delete_screenshot(app_id, platform, screenshot_id):
     db.session.commit()
     return jsonify(success=True, message=f"Deleted screenshot {screenshot_id}", id=screenshot_id, platform=platform)
 
+@devportal_api.route('/app/<app_id>/screenshots/<platform>/set_order', methods=['POST'])
+def move_screenshot(app_id, platform):
+    try:
+        req = request.json
+    except BadRequest:
+        return jsonify(error="Invalid POST body. Expected JSON", e="body.invalid"), 400
+
+    if req is None:
+        return jsonify(error="Invalid POST body. Expected JSON and 'Content-Type: application/json'", e="request.invalid"), 400
+
+    if "order" not in req:
+        return jsonify(error="Missing required field: order", e="missing.field.order"), 400
+
+    try:
+        app = App.query.filter(App.id == app_id).one()
+    except NoResultFound:
+        return jsonify(error="Unknown app", e="app.notfound"), 400
+
+    # Check we own the app
+    if not is_users_developer_id(app.developer_id):
+        return jsonify(error="You do not have permission to modify that app", e="permission.denied"), 403
+
+    if not is_valid_platform(platform):
+        return jsonify(error=f"Invalid platform: {platform}", e="platform.invalid"), 400
+
+    asset_collection = AssetCollection.query.filter(AssetCollection.app_id == app.id, AssetCollection.platform == platform).one_or_none()
+
+    if asset_collection is None:
+        return jsonify(error="Asset collection not found", e="screenshot.invalid"), 400
+
+    for screenshot_id in req["order"]:
+        if screenshot_id not in asset_collection.screenshots:
+            return jsonify(error=f"Screenshot not found: {screenshot_id}", e="screenshot.invalid"), 400
+
+    asset_collection.screenshots = req["order"]
+
+    # Invalidate the cached preview.
+    app.preview_image = None
+
+    db.session.commit()
+    return jsonify(success=True, message=f"Updated screenshot order", platform=platform)
 @devportal_api.route('/app/<app_id>/banners/<platform>', methods=['GET'])
 def get_app_banners(app_id, platform):
     # Check app exists
