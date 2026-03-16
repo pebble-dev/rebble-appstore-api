@@ -109,12 +109,14 @@ def update_my_developer():
     me = result.json()
     developer_id = me["id"]
 
-    developer = Developer.query.filter_by(id=developer_id).one()
-    print("Update developer from " + developer.name + " to " + req["name"])
-    developer.name = req["name"]
-    db.session.commit()
-
-    return jsonify(success=True, id=developer.id, name=developer.name)
+    developer = Developer.query.filter_by(id=developer_id).one_or_none()
+    if developer is not None:
+        print("Update developer from " + developer.name + " to " + req["name"])
+        developer.name = req["name"]
+        db.session.commit()
+        return jsonify(success=True, id=developer.id, name=developer.name)
+    else
+        return jsonify(success=False, error="You do not have a developer ID to rename. Set up your account first.", e="account.nonexistant"), 400
 
 
 @legacy_api.route('/applications/<app_id>/add_heart', methods=['POST'])
