@@ -40,6 +40,27 @@ class Collection(db.Model):
                            secondary=collection_apps,
                            passive_deletes=True,
                            lazy='dynamic')
+
+
+    @classmethod
+    def from_json(cls, json):
+        collection = cls(slug=json['slug'], app_type=json['app_type'])
+        collection.update_from_json(json)
+
+        return collection
+
+    def update_from_json(self, json):
+        self.name = json['name']
+        self.platforms = json['platforms']
+
+    def to_json(self):
+        return {'name': self.name,
+                'slug': self.slug,
+                'app_type': self.app_type,
+                'platforms': self.platforms,
+                'app_ids': [ app.id for app in self.apps ]}
+
+
 db.Index('collection_platforms_index', Collection.platforms, postgresql_using="gin")
 
 
