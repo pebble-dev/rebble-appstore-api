@@ -2,6 +2,8 @@ import json
 import requests
 import random
 
+from flask import current_app
+
 from .settings import config
 from .utils import get_app_description, generate_image_url, who_am_i
 import appstore # break the circular dependency to import get_topic_url_for_app from discourse
@@ -221,17 +223,53 @@ def report_app_unlisted(app_name, developer_name, app_id, affected_app_uuid = No
 
     send_admin_discord_webhook(request_data)
 
+def truncate_string_to_length(string, length):
+    if len(string) <= length:
+        return string
+
+    return string[:(length - 1)] + '…'
+
+def truncate_data(embed):
+    if 'title' in embed:
+        embed['title'] = truncate_string_to_length(embed['title'], 256)
+
+    if 'description' in embed:
+        embed['description'] = truncate_string_to_length(embed['description'], 4096)
+
+    for field in embed['fields']:
+        if 'name' in field:
+            field['name'] = truncate_string_to_length(field['name'], 256)
+
+        if 'value' in field:
+            field['value'] = truncate_string_to_length(field['value'], 1024)
+
+    if 'author' in embed and 'name' in embed['author']:
+        embed['author']['name'] = truncate_string_to_length(embed['author']['name'], 256)
+
+    if 'footer' in embed and 'text' in embed['footer']:
+        embed['footer']['text'] = truncate_string_to_length(embed['footer']['text'], 2048)
+
+    return embed
+
 def send_discord_webhook(request_data, is_generated = False):
+    request_data['embeds'][0] = truncate_data(request_data['embeds'][0])
     if not is_generated:
         if config['DISCORD_HOOK_URL'] is not None:
             headers = {'Content-Type': 'application/json'}
-            requests.post(config['DISCORD_HOOK_URL'], data=json.dumps(request_data), headers=headers)
+            r = requests.post(config['DISCORD_HOOK_URL'], data=json.dumps(request_data), headers=headers)
+            if r.status_code != 200:
+                current_app.logger.warning(f"Discord returned {r.status_code} with message: {r.text}")
     else:
         if config['DISCORD_GENERATED_HOOK_URL'] is not None:
             headers = {'Content-Type': 'application/json'}
-            requests.post(config['DISCORD_GENERATED_HOOK_URL'], data=json.dumps(request_data), headers=headers)
+            r = requests.post(config['DISCORD_GENERATED_HOOK_URL'], data=json.dumps(request_data), headers=headers)
+            if r.status_code != 200:
+                current_app.logger.warning(f"Discord returned {r.status_code} with message: {r.text}")
 
 def send_admin_discord_webhook(request_data):
     if config['DISCORD_ADMIN_HOOK_URL'] is not None:
+        request_data['embeds'][0] = truncate_data(request_data['embeds'][0])
         headers = {'Content-Type': 'application/json'}
-        requests.post(config['DISCORD_ADMIN_HOOK_URL'], data=json.dumps(request_data), headers=headers)
+        r = requests.post(config['DISCORD_ADMIN_HOOK_URL'], data=json.dumps(request_data), headers=headers)
+        if r.status_code != 200:
+            current_app.logger.warning(f"Discord returned {r.status_code} with message: {r.text}")
