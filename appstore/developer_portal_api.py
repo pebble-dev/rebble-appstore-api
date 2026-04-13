@@ -818,6 +818,29 @@ def update_app_forum_url(app_id):
     return jsonify(success=True, new_url=app.discourse_topic_id)
 
 
+@devportal_api.route("/pbw", methods=['POST'])
+def get_data_from_pbw(app_id):
+    if "pbw" not in request.files:
+        return jsonify(error="Missing file: pbw", e="pbw.missing"), 400
+
+    pbw_file = request.files['pbw'].read()
+
+    try:
+        pbw = PBW(pbw_file, 'aplite')
+        with pbw.zip.open('appinfo.json') as f:
+            appinfo = json.load(f)
+    except BadZipFile:
+        return jsonify(error="Your pbw file is invalid or corrupted", e="invalid.pbw"), 400
+    except KeyError:
+        return jsonify(error="Your pbw file is invalid or corrupted", e="invalid.pbw"), 400
+
+    appinfo_valid, appinfo_valid_reason = is_valid_appinfo(appinfo)
+    if not appinfo_valid:
+        return jsonify(error=f"The appinfo.json in your pbw file has the following error: {appinfo_valid_reason}", e="invalid.appinfocontent"), 400
+
+    return jsonify(appinfo)
+
+
 
 @devportal_api.route('/wizard/rename/<developer_id>', methods=['POST'])
 def wizard_rename_developer(developer_id):
