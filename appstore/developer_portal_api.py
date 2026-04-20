@@ -13,7 +13,7 @@ from sqlalchemy.exc import DataError
 from zipfile import BadZipFile
 
 from .utils import demand_authed_request, id_generator, validate_new_app_fields, is_valid_category, is_valid_appinfo, is_valid_platform, clone_asset_collection_without_images, is_valid_image_file, is_valid_image_size, get_max_image_dimensions, is_users_developer_id, user_is_wizard, newAppValidationException, algolia_app, first_version_is_newer, get_uid
-from .models import db, App, Developer, Release, AssetCollection, AvailableArchive
+from .models import db, App, Developer, Release, AssetCollection, AvailableArchive, Collection, collection_apps
 from .pbw import PBW, release_from_pbw
 from .s3 import upload_pbw, upload_asset, get_link_for_archive
 from .settings import config
@@ -947,6 +947,68 @@ def wizard_get_s3_assets(app_id):
     pbws = list(dict.fromkeys(pbws))
 
     return jsonify(images = images, pbws = pbws)
+
+
+@devportal_api.route('/wizard/collection', methods=['GET'])
+def collections():
+    if not user_is_wizard():
+        return jsonify(error="You are not a wizard", e="permission.denied"), 403
+
+    return jsonify([collection.slug for collection in Collection.query.all()])
+
+@devportal_api.route('/wizard/collection/<collection_slug>', methods=['GET', 'POST', 'DELETE'])
+def collection(collection_slug):
+    if not user_is_wizard():
+        return jsonify(error="You are not a wizard", e="permission.denied"), 403
+
+    collection = Collection.query.filter(Collection.slug == collection_slug).one_or_none()
+
+    if request.method == 'GET':
+        if collection is None:
+            return jsonify(error="Collection not found", e="not_found"), 404
+
+        return jsonify(collection.to_json())
+    elif request.method == 'POST':
+        if collection is None:
+            Collection.from_json(request.json)
+            db.session.commit()
+
+            return jsonify(success=True, slug=collection_slug)
+        else:
+            collection.update_from_json(request.json)
+            db.session.commit()
+
+            return jsonify(success=True, slug=collection_slug)
+    elif request.method == 'DELETE':
+        if collection is None:
+            return jsonify(error="Collection not found", e="not_found"), 404
+
+        collection.delete()
+        db.session.commit()
+
+        return jsonify(success=True, slug=collection_slug)
+
+@devportal_api.route('/wizard/collection/<collection_slug>/app/<app_id>', methods=['POST', 'DELETE'])
+def collection_app(collection_slug, app_id):
+    if not user_is_wizard():
+        return jsonify(error="You are not a wizard", e="permission.denied"), 403
+
+    collection = Collection.query.filter(Collection.slug == collection_slug).one_or_none()
+    app = App.query.filter(App.id == app_id).one_or_none()
+
+    if app is None or collection is None:
+        return jsonify(error="Collection or App not found", e="not_found"), 404
+
+    if request.method == 'POST':
+        collection_apps(collection_id=collection.id, app_id=app_id)
+        db.session.commit()
+
+        return jsonify(success=True, id=app_id)
+    elif request.method == 'DELETE':
+        collection_apps.query.filter(collection_id=collection.id, app_id=app_id).delete()
+        db.session.commit()
+
+        return jsonify(success=True, id=app_id)
 
 
 @devportal_api.route('/archive/latest', methods=['GET'])
