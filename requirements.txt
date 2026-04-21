@@ -10,7 +10,7 @@ Flask-SQLAlchemy==2.3.2
 Flask-Caching==1.0.0
 idna==2.7
 itsdangerous==0.24
-Jinja2==2.10
+Jinja2==2.11.3
 Mako==1.0.7
 MarkupSafe==1.1.1
 psycopg2==2.8.6
