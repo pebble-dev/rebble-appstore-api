@@ -360,6 +360,22 @@ def submit_new_release(app_id):
     App.query.filter_by(id=app_id).update({'updated_at': datetime.datetime.utcnow()})
     db.session.commit()
 
+    # Sync the new release to Algolia so search results reflect the new
+    # version, release notes, and compatibility. Without this, the app
+    # store search keeps returning whatever version was last indexed by
+    # submit_new_app / update_app.
+    # algolia_app(app) reads app.releases[0]; with the default
+    # expire_on_commit=True the relationship is reloaded on next access
+    # and includes the release we just added (ordered by published_date DESC).
+    # Wrapped in try/except like the Discord/Discourse announcements below
+    # so a transient Algolia outage can't make a successful release look
+    # like a failure to the developer (the release is already committed).
+    if algolia_index and app.visible:
+        try:
+            algolia_index.partial_update_objects([algolia_app(app)], { 'createIfNotExists': True })
+        except Exception as e:
+            print(f"Algolia is being weird: {repr(e)}")
+
     if app.visible:
         try:
             discord.announce_release(app, release_new, pbw.is_generated())
