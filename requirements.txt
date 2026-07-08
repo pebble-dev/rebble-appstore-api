@@ -11,7 +11,7 @@ Flask-Caching==1.0.0
 idna==2.7
 itsdangerous==0.24
 Jinja2==2.10
-Mako==1.0.7
+Mako==1.2.2
 MarkupSafe==1.1.1
 psycopg2==2.8.6
 python-dateutil==2.7.3
